@@ -1,0 +1,48 @@
+import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'ACEIT Sports',
+    short_name: 'ACEIT Sports',
+    description: 'Official master athletics and sports platform of Arya College of Engineering & IT',
+    start_url: '/',
+    id: '/',
+    scope: '/',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#060a14',
+    theme_color: '#060a14',
+    icons: [
+      {
+        src: '/icons/icon-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any'
+      },
+      {
+        src: '/icons/icon-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any'
+      },
+      {
+        src: '/icons/icon-maskable-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'maskable'
+      },
+      {
+        src: '/icons/icon-maskable-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable'
+      },
+      {
+        src: '/icons/apple-touch-icon.png',
+        sizes: '180x180',
+        type: 'image/png'
+      }
+    ],
+    categories: ['sports', 'education']
+  };
+}

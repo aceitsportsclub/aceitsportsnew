@@ -1,0 +1,68 @@
+{
+  "journey": [
+    {
+      "step": "01",
+      "title": "ELITE TRAINING GROUNDS",
+      "desc": "State-of-the-art sports facilities including indoor arenas, floodlit football turf, professional cricket nets, and dedicated athletic fitness gyms."
+    },
+    {
+      "step": "02",
+      "title": "UNIFIED CLUB ECOSYSTEM",
+      "desc": "Seamless integration between volleyball, cricket, basketball, and football. Every athlete trains with specialized coaches and sports science support."
+    },
+    {
+      "step": "03",
+      "title": "STATE & NATIONAL GLORY",
+      "desc": "Representing Arya College of Engineering & IT at prestigious university leagues, state cups, and national collegiate championships."
+    }
+  ],
+  "footer": {
+    "brand": "ACEIT SPORTS",
+    "description": "The official collegiate sports & athletics community of Arya College of Engineering & IT.",
+    "copyright": "© 2026 Arya College of Engineering & IT (ACEIT Sports). All rights reserved.",
+    "maintainer": "Founded & Maintained by Patidar",
+    "maintainerUrl": "https://instagram.com/aceitsportsclub",
+    "exploreLinks": [
+      {
+        "label": "Squads",
+        "href": "#"
+      },
+      {
+        "label": "Matches",
+        "href": "#matches"
+      },
+      {
+        "label": "All Clubs",
+        "href": "#hero-showcase"
+      }
+    ],
+    "communityLinks": [
+      {
+        "label": "Gallery",
+        "href": "#"
+      },
+      {
+        "label": "Join Club",
+        "href": "#hero-showcase"
+      },
+      {
+        "label": "Contact",
+        "href": "#"
+      }
+    ],
+    "socialLinks": [
+      {
+        "platform": "Instagram",
+        "url": "https://www.instagram.com/aceitsportsclub"
+      },
+      {
+        "platform": "Facebook",
+        "url": "https://facebook.com"
+      },
+      {
+        "platform": "YouTube",
+        "url": "https://youtube.com"
+      }
+    ]
+  }
+}
