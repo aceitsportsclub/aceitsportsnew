@@ -29,9 +29,11 @@ export async function GET(request: Request) {
       if (clubId === 'all') clubId = 'spikers';
     }
 
-    const data = await readContent(clubId);
     const url = new URL(request.url);
     const isExport = url.searchParams.get('export') === '1' || url.searchParams.get('export') === 'true';
+    const section = isExport ? undefined : (url.searchParams.get('section') || url.searchParams.get('module') || undefined);
+
+    const data = await readContent(clubId, undefined, section ? { section } : undefined);
 
     if (isExport) {
       return NextResponse.json({

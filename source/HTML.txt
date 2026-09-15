@@ -8037,7 +8037,10 @@
           var el = document.createElement('div');
           el.className = 'match-card card reveal visible';
           var d = new Date(m.date);
-          var dateStr = isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+          var dateOnlyStr = isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+          var timeStr = (!isNaN(d.getTime()) && (d.getHours() !== 0 || d.getMinutes() !== 0 || String(m.date).includes('T'))) ? d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
+          var dateStr = dateOnlyStr + (timeStr ? (' • ' + timeStr) : '');
+          var venueStr = (m.venue && String(m.venue).trim()) ? esc(m.venue) : 'ACEIT Sports Complex';
           var statusClass = m.status === 'live' ? 'status-live' : (m.status === 'completed' ? 'status-completed' : 'status-upcoming');
           var statusLabel = m.status === 'live' ? 'Live' : (m.status === 'completed' ? 'Completed' : 'Upcoming');
 
@@ -8115,7 +8118,7 @@
               '<div><div class="cd-num cd-m">00</div><div class="cd-label">Min</div></div>' +
               '<div><div class="cd-num cd-s">00</div><div class="cd-label">Sec</div></div>' +
               '</div>') : '') +
-            '<div class="match-meta"><span>&#128205; ' + esc(m.venue) + '</span><span>' + dateStr + '</span></div>';
+            '<div class="match-meta"><span class="match-venue">&#128205; ' + venueStr + '</span><span class="match-time-date">&#128197; ' + dateStr + '</span></div>';
           matchesGrid.appendChild(el);
         });
         updateCountdowns();

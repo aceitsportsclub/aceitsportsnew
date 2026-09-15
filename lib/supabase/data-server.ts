@@ -188,7 +188,12 @@ async function resolveClubId(supabase: SupabaseClient, clubRef: string): Promise
   throw new Error('CLUB_NOT_FOUND');
 }
 
-export async function readContent(clubId: string, client?: SupabaseClient) {
+export interface ReadContentOptions {
+  section?: string;
+  previewLimit?: number;
+}
+
+export async function readContent(clubId: string, client?: SupabaseClient, options?: ReadContentOptions) {
   const supabase = client || await createSupabaseAuthServerClient();
   const cleanRef = (clubId || '').trim().toLowerCase();
   const isAll = cleanRef === 'all';
@@ -217,23 +222,62 @@ export async function readContent(clubId: string, client?: SupabaseClient) {
     applications: []
   };
 
-  for (const table of CONTENT_TABLES) {
+  const normSection = (options?.section || '').trim().toLowerCase();
+
+  // Determine which tables to fetch based on section
+  let tablesToFetch: ContentTable[] = [...CONTENT_TABLES];
+  const tableLimits: Partial<Record<ContentTable, number>> = {};
+
+  if (normSection === 'home') {
+    tableLimits.players = options?.previewLimit || 6;
+    tableLimits.matches = 4;
+    tableLimits.news = 3;
+    tableLimits.gallery = 6;
+    tableLimits.testimonials = 3;
+    tableLimits.events = 3;
+    tableLimits.slideshow = 10;
+  } else if (normSection === 'players' || normSection === 'team') {
+    tablesToFetch = ['players'];
+  } else if (normSection === 'matches') {
+    tablesToFetch = ['matches'];
+  } else if (normSection === 'gallery') {
+    tablesToFetch = ['gallery'];
+  } else if (normSection === 'events') {
+    tablesToFetch = ['events'];
+  } else if (normSection === 'notice-board' || normSection === 'news' || normSection === 'notices') {
+    tablesToFetch = ['news'];
+  } else if (normSection === 'testimonials') {
+    tablesToFetch = ['testimonials'];
+  } else if (normSection === 'stats') {
+    tablesToFetch = ['stats'];
+  } else if (normSection === 'contact') {
+    tablesToFetch = [];
+  }
+
+  for (const table of tablesToFetch) {
     const orderBy = (table === 'slideshow' || table === 'gallery') ? 'sort_order' : 'created_at';
     let query = supabase.from(table).select('*, clubs(slug)');
     if (resolvedClubId) {
       query = query.eq('club_id', resolvedClubId);
     }
-    const { data, error } = await query.order(orderBy, { ascending: true });
+    const limit = tableLimits[table];
+    if (typeof limit === 'number' && limit > 0) {
+      query = query.order(orderBy, { ascending: true }).limit(limit);
+    } else {
+      query = query.order(orderBy, { ascending: true });
+    }
+    const { data, error } = await query;
     if (error) throw error;
     result[sourceKeys[table]] = (data ?? []).map((row) => mapRowToSource(table, row));
   }
 
   if (resolvedClubId) {
+    const shouldFetchCategories = !normSection || normSection === 'home' || normSection === 'players' || normSection === 'team' || normSection === 'gallery';
     const [{ data: about }, { data: contact }, { data: contactButtons }, { data: categories }] = await Promise.all([
       supabase.from('club_about').select('*').eq('club_id', resolvedClubId).maybeSingle(),
       supabase.from('club_contact').select('*').eq('club_id', resolvedClubId).maybeSingle(),
       supabase.from('club_contact_buttons').select('*').eq('club_id', resolvedClubId).order('sort_order', { ascending: true }),
-      supabase.from('custom_categories').select('*').eq('club_id', resolvedClubId)
+      shouldFetchCategories ? supabase.from('custom_categories').select('*').eq('club_id', resolvedClubId) : Promise.resolve({ data: [] })
     ]);
     result.about = about ?? {};
 
