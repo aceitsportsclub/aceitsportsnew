@@ -127,7 +127,7 @@
   color: #475569;
 }
 
-[data-theme="light"] .match-card.is-live {
+[data-theme="light"] .aceit-master-landing .match-card.is-live {
   background: linear-gradient(90deg, rgba(239, 68, 68, 0.06) 0%, rgba(255, 255, 255, 0.95) 100%);
 }
 
@@ -1030,7 +1030,7 @@ button {
   margin-bottom: 36px;
 }
 
-.match-card {
+.aceit-master-landing .match-card {
   background: var(--bg-glass-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -1044,20 +1044,20 @@ button {
   transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.match-card:hover {
+.aceit-master-landing .match-card:hover {
   transform: translateY(-3px);
   border-color: var(--border-hover);
   box-shadow: var(--shadow-hover);
 }
 
-.match-card.is-live {
+.aceit-master-landing .match-card.is-live {
   border-color: rgba(239, 68, 68, 0.4);
   background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(14, 23, 44, 0.7) 100%);
   box-shadow: 0 10px 30px rgba(239, 68, 68, 0.15);
 }
 
 /* Match Meta (Club & Tournament) */
-.match-meta {
+.aceit-master-landing .match-meta {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1627,12 +1627,12 @@ button {
     font-size: clamp(3.2rem, 9vw, 6rem);
   }
 
-  .match-card {
+  .aceit-master-landing .match-card {
     grid-template-columns: 1fr;
     gap: 18px;
   }
 
-  .match-meta {
+  .aceit-master-landing .match-meta {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
@@ -1732,7 +1732,7 @@ button {
     display: none;
   }
 
-  .match-card {
+  .aceit-master-landing .match-card {
     padding: 16px;
   }
 

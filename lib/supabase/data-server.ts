@@ -193,7 +193,7 @@ export interface ReadContentOptions {
   previewLimit?: number;
 }
 
-export async function readContent(clubId: string, client?: SupabaseClient, options?: ReadContentOptions) {
+export async function readContent(clubId: string, client?: SupabaseClient, options?: string | ReadContentOptions) {
   const supabase = client || await createSupabaseAuthServerClient();
   const cleanRef = (clubId || '').trim().toLowerCase();
   const isAll = cleanRef === 'all';
@@ -201,6 +201,39 @@ export async function readContent(clubId: string, client?: SupabaseClient, optio
 
   if (!isAll) {
     resolvedClubId = await resolveClubId(supabase, cleanRef);
+  }
+
+  const optObj: ReadContentOptions = typeof options === 'string' ? { section: options } : (options || {});
+  const cleanSection = (optObj.section || '').trim().toLowerCase();
+
+  // Determine which tables to fetch based on section
+  let tablesToFetch: ContentTable[] = [...CONTENT_TABLES];
+  const tableLimits: Partial<Record<ContentTable, number>> = {};
+
+  if (cleanSection === 'home') {
+    tableLimits.players = optObj.previewLimit || 6;
+    tableLimits.matches = 4;
+    tableLimits.news = 3;
+    tableLimits.gallery = 6;
+    tableLimits.testimonials = 3;
+    tableLimits.events = 3;
+    tableLimits.slideshow = 10;
+  } else if (cleanSection === 'players' || cleanSection === 'team') {
+    tablesToFetch = ['players'];
+  } else if (cleanSection === 'matches') {
+    tablesToFetch = ['matches'];
+  } else if (cleanSection === 'gallery') {
+    tablesToFetch = ['gallery'];
+  } else if (cleanSection === 'events') {
+    tablesToFetch = ['events'];
+  } else if (cleanSection === 'notice-board' || cleanSection === 'news' || cleanSection === 'announcements' || cleanSection === 'notices') {
+    tablesToFetch = ['news'];
+  } else if (cleanSection === 'testimonials') {
+    tablesToFetch = ['testimonials'];
+  } else if (cleanSection === 'stats') {
+    tablesToFetch = ['stats'];
+  } else if (cleanSection === 'contact') {
+    tablesToFetch = [];
   }
 
   const result: Record<string, unknown> = {
@@ -222,38 +255,6 @@ export async function readContent(clubId: string, client?: SupabaseClient, optio
     applications: []
   };
 
-  const normSection = (options?.section || '').trim().toLowerCase();
-
-  // Determine which tables to fetch based on section
-  let tablesToFetch: ContentTable[] = [...CONTENT_TABLES];
-  const tableLimits: Partial<Record<ContentTable, number>> = {};
-
-  if (normSection === 'home') {
-    tableLimits.players = options?.previewLimit || 6;
-    tableLimits.matches = 4;
-    tableLimits.news = 3;
-    tableLimits.gallery = 6;
-    tableLimits.testimonials = 3;
-    tableLimits.events = 3;
-    tableLimits.slideshow = 10;
-  } else if (normSection === 'players' || normSection === 'team') {
-    tablesToFetch = ['players'];
-  } else if (normSection === 'matches') {
-    tablesToFetch = ['matches'];
-  } else if (normSection === 'gallery') {
-    tablesToFetch = ['gallery'];
-  } else if (normSection === 'events') {
-    tablesToFetch = ['events'];
-  } else if (normSection === 'notice-board' || normSection === 'news' || normSection === 'notices') {
-    tablesToFetch = ['news'];
-  } else if (normSection === 'testimonials') {
-    tablesToFetch = ['testimonials'];
-  } else if (normSection === 'stats') {
-    tablesToFetch = ['stats'];
-  } else if (normSection === 'contact') {
-    tablesToFetch = [];
-  }
-
   for (const table of tablesToFetch) {
     const orderBy = (table === 'slideshow' || table === 'gallery') ? 'sort_order' : 'created_at';
     let query = supabase.from(table).select('*, clubs(slug)');
@@ -271,108 +272,135 @@ export async function readContent(clubId: string, client?: SupabaseClient, optio
     result[sourceKeys[table]] = (data ?? []).map((row) => mapRowToSource(table, row));
   }
 
-  if (resolvedClubId) {
-    const shouldFetchCategories = !normSection || normSection === 'home' || normSection === 'players' || normSection === 'team' || normSection === 'gallery';
-    const [{ data: about }, { data: contact }, { data: contactButtons }, { data: categories }] = await Promise.all([
-      supabase.from('club_about').select('*').eq('club_id', resolvedClubId).maybeSingle(),
-      supabase.from('club_contact').select('*').eq('club_id', resolvedClubId).maybeSingle(),
-      supabase.from('club_contact_buttons').select('*').eq('club_id', resolvedClubId).order('sort_order', { ascending: true }),
-      shouldFetchCategories ? supabase.from('custom_categories').select('*').eq('club_id', resolvedClubId) : Promise.resolve({ data: [] })
-    ]);
-    result.about = about ?? {};
+  const needsCategories = !cleanSection || cleanSection === 'home' || cleanSection === 'players' || cleanSection === 'team' || cleanSection === 'gallery';
+  const needsAboutContact = !cleanSection || cleanSection === 'home';
 
-    const buttons = (contactButtons ?? []).map((b) => ({
-      id: b.id,
-      label: b.label,
-      url: b.url,
-      sort_order: b.sort_order
-    }));
-    const firstInsta = buttons.find((b) => /instagram/i.test(b.label) || /instagram/i.test(b.url));
+  if (resolvedClubId && (needsAboutContact || needsCategories)) {
+    const promises: PromiseLike<any>[] = [];
+    if (needsAboutContact) {
+      promises.push(
+        supabase.from('club_about').select('*').eq('club_id', resolvedClubId).maybeSingle(),
+        supabase.from('club_contact').select('*').eq('club_id', resolvedClubId).maybeSingle(),
+        supabase.from('club_contact_buttons').select('*').eq('club_id', resolvedClubId).order('sort_order', { ascending: true })
+      );
+    }
+    if (needsCategories) {
+      promises.push(
+        supabase.from('custom_categories').select('*').eq('club_id', resolvedClubId)
+      );
+    }
 
-    result.contact = {
-      ...(contact ?? {}),
-      socialButtons: buttons,
-      insta: firstInsta ? firstInsta.url : (buttons[0]?.url || 'https://instagram.com/aceit_jaipur')
-    };
+    const res = await Promise.all(promises);
+    let idx = 0;
+    let about = null, contact = null, contactButtons: any[] = [], categories: any[] = [];
+    if (needsAboutContact) {
+      about = res[idx++]?.data ?? null;
+      contact = res[idx++]?.data ?? null;
+      contactButtons = res[idx++]?.data ?? [];
+    }
+    if (needsCategories) {
+      categories = res[idx++]?.data ?? [];
+    }
 
-    const isOrderRow = (row: { name?: string }) => typeof row?.name === 'string' && row.name.startsWith('__player_order__:');
+    if (needsAboutContact) {
+      result.about = about ?? {};
+      const buttons = (contactButtons ?? []).map((b: any) => ({
+        id: b.id,
+        label: b.label,
+        url: b.url,
+        sort_order: b.sort_order
+      }));
+      const firstInsta = buttons.find((b: any) => /instagram/i.test(b.label) || /instagram/i.test(b.url));
+      result.contact = {
+        ...(contact ?? {}),
+        socialButtons: buttons,
+        insta: firstInsta ? firstInsta.url : (buttons[0]?.url || 'https://instagram.com/aceit_jaipur')
+      };
+    }
 
-    result.deletedCategories = {
-      team: (categories ?? []).filter((row) => row.section === 'team' && row.active === false && !isOrderRow(row)).map((row) => row.name),
-      gallery: (categories ?? []).filter((row) => row.section === 'gallery' && row.active === false && !isOrderRow(row)).map((row) => row.name)
-    };
-    result.customCategories = {
-      team: (categories ?? []).filter((row) => row.section === 'team' && row.active !== false && !isOrderRow(row)).map((row) => row.name),
-      gallery: (categories ?? []).filter((row) => row.section === 'gallery' && row.active !== false && !isOrderRow(row)).map((row) => row.name)
-    };
-    result.categories = {
-      team: (categories ?? []).filter((row) => row.section === 'team' && row.active !== false && !isOrderRow(row)).map((row) => row.name),
-      gallery: (categories ?? []).filter((row) => row.section === 'gallery' && row.active !== false && !isOrderRow(row)).map((row) => row.name)
-    };
+    if (needsCategories) {
+      const isOrderRow = (row: { name?: string }) => typeof row?.name === 'string' && row.name.startsWith('__player_order__:');
 
-    const playerOrderRecord = (categories ?? []).find((row) => row.section === 'team' && isOrderRow(row));
-    if (playerOrderRecord?.name && Array.isArray(result.team)) {
-      let orderedIds: string[] = [];
-      try {
-        const raw = playerOrderRecord.name.substring('__player_order__:'.length);
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) orderedIds = parsed.map(String);
-      } catch {
-        // ignore parse errors
-      }
+      result.deletedCategories = {
+        team: (categories ?? []).filter((row) => row.section === 'team' && row.active === false && !isOrderRow(row)).map((row) => row.name),
+        gallery: (categories ?? []).filter((row) => row.section === 'gallery' && row.active === false && !isOrderRow(row)).map((row) => row.name)
+      };
+      result.customCategories = {
+        team: (categories ?? []).filter((row) => row.section === 'team' && row.active !== false && !isOrderRow(row)).map((row) => row.name),
+        gallery: (categories ?? []).filter((row) => row.section === 'gallery' && row.active !== false && !isOrderRow(row)).map((row) => row.name)
+      };
+      result.categories = {
+        team: (categories ?? []).filter((row) => row.section === 'team' && row.active !== false && !isOrderRow(row)).map((row) => row.name),
+        gallery: (categories ?? []).filter((row) => row.section === 'gallery' && row.active !== false && !isOrderRow(row)).map((row) => row.name)
+      };
 
-      if (orderedIds.length > 0) {
-        const idMap = new Map<string, number>();
-        orderedIds.forEach((id, idx) => idMap.set(id, idx));
+      const playerOrderRecord = (categories ?? []).find((row) => row.section === 'team' && isOrderRow(row));
+      if (playerOrderRecord?.name && Array.isArray(result.team)) {
+        let orderedIds: string[] = [];
+        try {
+          const raw = playerOrderRecord.name.substring('__player_order__:'.length);
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) orderedIds = parsed.map(String);
+        } catch {
+          // ignore parse errors
+        }
 
-        result.team.sort((a, b) => {
-          const aId = String((a as { id?: unknown })?.id || '');
-          const bId = String((b as { id?: unknown })?.id || '');
-          const aPos = idMap.has(aId) ? idMap.get(aId)! : -1;
-          const bPos = idMap.has(bId) ? idMap.get(bId)! : -1;
+        if (orderedIds.length > 0) {
+          const idMap = new Map<string, number>();
+          orderedIds.forEach((id, idx) => idMap.set(id, idx));
 
-          if (aPos === -1 && bPos === -1) return 0;
-          if (aPos === -1) return 1;
-          if (bPos === -1) return -1;
-          return aPos - bPos;
-        });
+          result.team.sort((a, b) => {
+            const aId = String((a as { id?: unknown })?.id || '');
+            const bId = String((b as { id?: unknown })?.id || '');
+            const aPos = idMap.has(aId) ? idMap.get(aId)! : -1;
+            const bPos = idMap.has(bId) ? idMap.get(bId)! : -1;
+
+            if (aPos === -1 && bPos === -1) return 0;
+            if (aPos === -1) return 1;
+            if (bPos === -1) return -1;
+            return aPos - bPos;
+          });
+        }
       }
     }
   }
 
-  let appsQuery = supabase.from('applications').select('*, clubs(id, slug, name)');
-  if (resolvedClubId) {
-    appsQuery = appsQuery.eq('club_id', resolvedClubId);
+  // applications query is only needed for admin/full read, not public section views
+  if (!cleanSection) {
+    let appsQuery = supabase.from('applications').select('*, clubs(id, slug, name)');
+    if (resolvedClubId) {
+      appsQuery = appsQuery.eq('club_id', resolvedClubId);
+    }
+    const { data: appsData } = await appsQuery.order('created_at', { ascending: false });
+    result.applications = (appsData ?? []).map((row) => {
+      const clubObj = Array.isArray(row.clubs) ? row.clubs[0] : (row.clubs as Record<string, unknown> | null);
+      const clubSlug = (clubObj?.slug as string) || 'spikers';
+      const createdAt = (row.created_at as string) || new Date().toISOString();
+      return {
+        id: row.id,
+        _id: row.id,
+        clubId: row.club_id,
+        club_id: row.club_id,
+        clubSlug,
+        club: clubSlug,
+        userId: row.user_id || null,
+        user_id: row.user_id || null,
+        name: row.name,
+        email: row.email,
+        phone: row.phone || '',
+        position: row.position || '',
+        experience: row.experience || '',
+        message: row.message || '',
+        source: row.source || 'Website Form',
+        status: row.status || 'Pending',
+        date: createdAt,
+        createdAt,
+        created_at: createdAt,
+        updatedAt: row.updated_at || createdAt,
+        updated_at: row.updated_at || createdAt
+      };
+    });
   }
-  const { data: appsData } = await appsQuery.order('created_at', { ascending: false });
-  result.applications = (appsData ?? []).map((row) => {
-    const clubObj = Array.isArray(row.clubs) ? row.clubs[0] : (row.clubs as Record<string, unknown> | null);
-    const clubSlug = (clubObj?.slug as string) || 'spikers';
-    const createdAt = (row.created_at as string) || new Date().toISOString();
-    return {
-      id: row.id,
-      _id: row.id,
-      clubId: row.club_id,
-      club_id: row.club_id,
-      clubSlug,
-      club: clubSlug,
-      userId: row.user_id || null,
-      user_id: row.user_id || null,
-      name: row.name,
-      email: row.email,
-      phone: row.phone || '',
-      position: row.position || '',
-      experience: row.experience || '',
-      message: row.message || '',
-      source: row.source || 'Website Form',
-      status: row.status || 'Pending',
-      date: createdAt,
-      createdAt,
-      created_at: createdAt,
-      updatedAt: row.updated_at || createdAt,
-      updated_at: row.updated_at || createdAt
-    };
-  });
 
   return result;
 }

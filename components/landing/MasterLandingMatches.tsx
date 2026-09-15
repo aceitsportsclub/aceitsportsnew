@@ -120,6 +120,7 @@ export default function MasterLandingMatches({ matches }: MasterLandingMatchesPr
                         width={26}
                         height={26}
                         loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).src = '/landing/assets/icons/aceit_crest.svg';
                         }}

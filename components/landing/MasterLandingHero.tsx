@@ -126,6 +126,7 @@ export default function MasterLandingHero({ clubs }: MasterLandingHeroProps) {
                   alt={`${club.name} action photography`}
                   className="hero-slide-img"
                   loading={idx === 0 ? 'eager' : 'lazy'}
+                  decoding="async"
                   onError={(e) => {
                     const fallback = SPORT_METADATA[(club.sport || '').toLowerCase()]?.fallbackBanner || '/landing/assets/images/hero_spikers.jpg';
                     (e.currentTarget as HTMLImageElement).src = fallback;

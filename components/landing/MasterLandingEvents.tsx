@@ -114,6 +114,7 @@ export default function MasterLandingEvents({ events, clubs }: MasterLandingEven
                       alt={ev.title}
                       className="event-card-img"
                       loading="lazy"
+                      decoding="async"
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).src = '/landing/assets/images/event_volleyball.jpg';
                       }}
@@ -133,6 +134,7 @@ export default function MasterLandingEvents({ events, clubs }: MasterLandingEven
                         width={18}
                         height={18}
                         loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).src = '/landing/assets/icons/aceit_crest.svg';
                         }}

@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url);
     const isExport = url.searchParams.get('export') === '1' || url.searchParams.get('export') === 'true';
-    const section = isExport ? undefined : (url.searchParams.get('section') || url.searchParams.get('module') || undefined);
+    const section = isExport ? undefined : (url.searchParams.get('section')?.trim().toLowerCase() || url.searchParams.get('module')?.trim().toLowerCase() || undefined);
 
     const data = await readContent(clubId, undefined, section ? { section } : undefined);
 
