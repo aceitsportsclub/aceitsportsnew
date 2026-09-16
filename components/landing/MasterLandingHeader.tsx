@@ -114,6 +114,7 @@ export default function MasterLandingHeader({ clubs, user }: MasterLandingHeader
               className="brand-crest"
               width={38}
               height={38}
+              decoding="async"
               style={{ objectFit: 'contain' }}
             />
             <div className="brand-text">
@@ -162,6 +163,7 @@ export default function MasterLandingHeader({ clubs, user }: MasterLandingHeader
                         className="club-dropdown-logo"
                         width={32}
                         height={32}
+                        decoding="async"
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).src = '/landing/assets/icons/aceit_crest.svg';
                         }}
@@ -209,6 +211,7 @@ export default function MasterLandingHeader({ clubs, user }: MasterLandingHeader
                     alt={cleanUserName}
                     className="user-avatar"
                     id="nav-user-avatar"
+                    decoding="async"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).style.display = 'none';
                     }}
@@ -289,6 +292,7 @@ export default function MasterLandingHeader({ clubs, user }: MasterLandingHeader
                   className="club-dropdown-logo"
                   width={28}
                   height={28}
+                  decoding="async"
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).src = '/landing/assets/icons/aceit_crest.svg';
                   }}

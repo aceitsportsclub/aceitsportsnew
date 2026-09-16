@@ -188,12 +188,7 @@ async function resolveClubId(supabase: SupabaseClient, clubRef: string): Promise
   throw new Error('CLUB_NOT_FOUND');
 }
 
-export interface ReadContentOptions {
-  section?: string;
-  previewLimit?: number;
-}
-
-export async function readContent(clubId: string, client?: SupabaseClient, options?: string | ReadContentOptions) {
+export async function readContent(clubId: string, client?: SupabaseClient, section?: string) {
   const supabase = client || await createSupabaseAuthServerClient();
   const cleanRef = (clubId || '').trim().toLowerCase();
   const isAll = cleanRef === 'all';
@@ -201,39 +196,6 @@ export async function readContent(clubId: string, client?: SupabaseClient, optio
 
   if (!isAll) {
     resolvedClubId = await resolveClubId(supabase, cleanRef);
-  }
-
-  const optObj: ReadContentOptions = typeof options === 'string' ? { section: options } : (options || {});
-  const cleanSection = (optObj.section || '').trim().toLowerCase();
-
-  // Determine which tables to fetch based on section
-  let tablesToFetch: ContentTable[] = [...CONTENT_TABLES];
-  const tableLimits: Partial<Record<ContentTable, number>> = {};
-
-  if (cleanSection === 'home') {
-    tableLimits.players = optObj.previewLimit || 6;
-    tableLimits.matches = 4;
-    tableLimits.news = 3;
-    tableLimits.gallery = 6;
-    tableLimits.testimonials = 3;
-    tableLimits.events = 3;
-    tableLimits.slideshow = 10;
-  } else if (cleanSection === 'players' || cleanSection === 'team') {
-    tablesToFetch = ['players'];
-  } else if (cleanSection === 'matches') {
-    tablesToFetch = ['matches'];
-  } else if (cleanSection === 'gallery') {
-    tablesToFetch = ['gallery'];
-  } else if (cleanSection === 'events') {
-    tablesToFetch = ['events'];
-  } else if (cleanSection === 'notice-board' || cleanSection === 'news' || cleanSection === 'announcements' || cleanSection === 'notices') {
-    tablesToFetch = ['news'];
-  } else if (cleanSection === 'testimonials') {
-    tablesToFetch = ['testimonials'];
-  } else if (cleanSection === 'stats') {
-    tablesToFetch = ['stats'];
-  } else if (cleanSection === 'contact') {
-    tablesToFetch = [];
   }
 
   const result: Record<string, unknown> = {
@@ -255,62 +217,80 @@ export async function readContent(clubId: string, client?: SupabaseClient, optio
     applications: []
   };
 
-  for (const table of tablesToFetch) {
+  const cleanSection = section ? section.trim().toLowerCase() : undefined;
+
+  let tablesToQuery: ContentTable[] = [];
+  if (!cleanSection) {
+    tablesToQuery = [...CONTENT_TABLES];
+  } else if (cleanSection === 'players' || cleanSection === 'team') {
+    tablesToQuery = ['players'];
+  } else if (cleanSection === 'gallery') {
+    tablesToQuery = ['gallery'];
+  } else if (cleanSection === 'matches') {
+    tablesToQuery = ['matches'];
+  } else if (cleanSection === 'events') {
+    tablesToQuery = ['events'];
+  } else if (cleanSection === 'notice-board' || cleanSection === 'news') {
+    tablesToQuery = ['news'];
+  } else if (cleanSection === 'home') {
+    tablesToQuery = ['slideshow', 'sponsors', 'testimonials', 'stats', 'training_sessions'];
+  } else {
+    tablesToQuery = [...CONTENT_TABLES];
+  }
+
+  for (const table of tablesToQuery) {
     const orderBy = (table === 'slideshow' || table === 'gallery') ? 'sort_order' : 'created_at';
     let query = supabase.from(table).select('*, clubs(slug)');
     if (resolvedClubId) {
       query = query.eq('club_id', resolvedClubId);
     }
-    const limit = tableLimits[table];
-    if (typeof limit === 'number' && limit > 0) {
-      query = query.order(orderBy, { ascending: true }).limit(limit);
-    } else {
-      query = query.order(orderBy, { ascending: true });
-    }
-    const { data, error } = await query;
+    const { data, error } = await query.order(orderBy, { ascending: true });
     if (error) throw error;
     result[sourceKeys[table]] = (data ?? []).map((row) => mapRowToSource(table, row));
   }
 
-  const needsCategories = !cleanSection || cleanSection === 'home' || cleanSection === 'players' || cleanSection === 'team' || cleanSection === 'gallery';
-  const needsAboutContact = !cleanSection || cleanSection === 'home';
+  const needCategories = !cleanSection || cleanSection === 'players' || cleanSection === 'team' || cleanSection === 'gallery';
+  const needAbout = !cleanSection || cleanSection === 'home' || cleanSection === 'about';
+  const needContact = !cleanSection || cleanSection === 'home' || cleanSection === 'contact';
+  const needApplications = !cleanSection;
 
-  if (resolvedClubId && (needsAboutContact || needsCategories)) {
-    const promises: PromiseLike<any>[] = [];
-    if (needsAboutContact) {
-      promises.push(
-        supabase.from('club_about').select('*').eq('club_id', resolvedClubId).maybeSingle(),
-        supabase.from('club_contact').select('*').eq('club_id', resolvedClubId).maybeSingle(),
-        supabase.from('club_contact_buttons').select('*').eq('club_id', resolvedClubId).order('sort_order', { ascending: true })
-      );
-    }
-    if (needsCategories) {
-      promises.push(
-        supabase.from('custom_categories').select('*').eq('club_id', resolvedClubId)
-      );
-    }
+  if (resolvedClubId) {
+    const aboutPromise = needAbout
+      ? supabase.from('club_about').select('*').eq('club_id', resolvedClubId).maybeSingle()
+      : Promise.resolve({ data: null });
 
-    const res = await Promise.all(promises);
-    let idx = 0;
-    let about = null, contact = null, contactButtons: any[] = [], categories: any[] = [];
-    if (needsAboutContact) {
-      about = res[idx++]?.data ?? null;
-      contact = res[idx++]?.data ?? null;
-      contactButtons = res[idx++]?.data ?? [];
-    }
-    if (needsCategories) {
-      categories = res[idx++]?.data ?? [];
-    }
+    const contactPromise = needContact
+      ? supabase.from('club_contact').select('*').eq('club_id', resolvedClubId).maybeSingle()
+      : Promise.resolve({ data: null });
 
-    if (needsAboutContact) {
+    const contactButtonsPromise = needContact
+      ? supabase.from('club_contact_buttons').select('*').eq('club_id', resolvedClubId).order('sort_order', { ascending: true })
+      : Promise.resolve({ data: null });
+
+    const categoriesPromise = needCategories
+      ? supabase.from('custom_categories').select('*').eq('club_id', resolvedClubId)
+      : Promise.resolve({ data: null });
+
+    const [{ data: about }, { data: contact }, { data: contactButtons }, { data: categories }] = await Promise.all([
+      aboutPromise,
+      contactPromise,
+      contactButtonsPromise,
+      categoriesPromise
+    ]) as [{ data: Record<string, unknown> | null }, { data: Record<string, unknown> | null }, { data: Array<{ id: string; label: string; url: string; sort_order: number }> | null }, { data: Array<{ name: string; section: string; active?: boolean }> | null }];
+
+    if (needAbout) {
       result.about = about ?? {};
-      const buttons = (contactButtons ?? []).map((b: any) => ({
+    }
+
+    if (needContact) {
+      const buttons = (contactButtons ?? []).map((b) => ({
         id: b.id,
         label: b.label,
         url: b.url,
         sort_order: b.sort_order
       }));
-      const firstInsta = buttons.find((b: any) => /instagram/i.test(b.label) || /instagram/i.test(b.url));
+      const firstInsta = buttons.find((b) => /instagram/i.test(b.label) || /instagram/i.test(b.url));
+
       result.contact = {
         ...(contact ?? {}),
         socialButtons: buttons,
@@ -318,7 +298,7 @@ export async function readContent(clubId: string, client?: SupabaseClient, optio
       };
     }
 
-    if (needsCategories) {
+    if (needCategories) {
       const isOrderRow = (row: { name?: string }) => typeof row?.name === 'string' && row.name.startsWith('__player_order__:');
 
       result.deletedCategories = {
@@ -365,8 +345,7 @@ export async function readContent(clubId: string, client?: SupabaseClient, optio
     }
   }
 
-  // applications query is only needed for admin/full read, not public section views
-  if (!cleanSection) {
+  if (needApplications) {
     let appsQuery = supabase.from('applications').select('*, clubs(id, slug, name)');
     if (resolvedClubId) {
       appsQuery = appsQuery.eq('club_id', resolvedClubId);

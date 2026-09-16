@@ -19,11 +19,9 @@ interface CachedLandingPayload {
   footerConfig: LandingFooterConfig;
 }
 
-const LANDING_CACHE_KEY = 'aceit_master_landing_payload_v1';
-let cachedLandingPayload: CachedLandingPayload | null = null;
-let pendingLandingFetch: Promise<void> | null = null;
+const LANDING_CACHE_KEY = 'aceit_landing_data_cache_v1';
 
-function getInitialPayload(): CachedLandingPayload | null {
+function getInitialLandingCache(): CachedLandingPayload | null {
   if (cachedLandingPayload) return cachedLandingPayload;
   if (typeof window !== 'undefined') {
     try {
@@ -40,64 +38,56 @@ function getInitialPayload(): CachedLandingPayload | null {
   return null;
 }
 
+let cachedLandingPayload: CachedLandingPayload | null = null;
+
 export default function MasterLandingPage() {
-  const [initPayload] = useState<CachedLandingPayload | null>(getInitialPayload);
-  const [clubs, setClubs] = useState<LandingClub[]>(initPayload ? initPayload.clubs : DEFAULT_CLUBS);
-  const [matches, setMatches] = useState<LandingMatch[]>(initPayload ? initPayload.matches : FALLBACK_MATCHES);
-  const [events, setEvents] = useState<LandingEvent[]>(initPayload ? initPayload.events : FALLBACK_EVENTS);
-  const [journey, setJourney] = useState<LandingJourneyItem[]>(initPayload ? initPayload.journey : DEFAULT_JOURNEY);
-  const [footerConfig, setFooterConfig] = useState<LandingFooterConfig>(initPayload ? initPayload.footerConfig : DEFAULT_FOOTER);
+  const initialCache = getInitialLandingCache();
+  const [clubs, setClubs] = useState<LandingClub[]>(initialCache ? initialCache.clubs : DEFAULT_CLUBS);
+  const [matches, setMatches] = useState<LandingMatch[]>(initialCache ? initialCache.matches : FALLBACK_MATCHES);
+  const [events, setEvents] = useState<LandingEvent[]>(initialCache ? initialCache.events : FALLBACK_EVENTS);
+  const [journey, setJourney] = useState<LandingJourneyItem[]>(initialCache ? initialCache.journey : DEFAULT_JOURNEY);
+  const [footerConfig, setFooterConfig] = useState<LandingFooterConfig>(initialCache ? initialCache.footerConfig : DEFAULT_FOOTER);
   const [user, setUser] = useState<AuthUserProfile | null>(null);
 
   // If already cached in memory or persistent storage, no splash loading screen needed
-  const [isLoading, setIsLoading] = useState(!initPayload);
+  const [isLoading, setIsLoading] = useState(!initialCache);
 
   useEffect(() => {
-    // 1. If we already have cached data, immediately dismiss loader
-    if (initPayload) {
-      setIsLoading(false);
-    }
+    // 1. Fetch Landing Data (Clubs, Matches, Events, Config) in parallel
+    const dataPromise = fetch('/api/landing/data')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.success) {
+          const newClubs = Array.isArray(data.clubs) && data.clubs.length > 0 ? data.clubs : DEFAULT_CLUBS;
+          const newMatches = Array.isArray(data.matches) && data.matches.length > 0 ? data.matches : FALLBACK_MATCHES;
+          const newEvents = Array.isArray(data.events) && data.events.length > 0 ? data.events : FALLBACK_EVENTS;
+          const newJourney = data.config && Array.isArray(data.config.journey) ? data.config.journey : DEFAULT_JOURNEY;
+          const newFooter = data.config && data.config.footer ? data.config.footer : DEFAULT_FOOTER;
 
-    // 2. Deduplicate Landing Data fetch
-    if (!pendingLandingFetch) {
-      pendingLandingFetch = fetch('/api/landing/data')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && data.success) {
-            const newClubs = Array.isArray(data.clubs) && data.clubs.length > 0 ? data.clubs : DEFAULT_CLUBS;
-            const newMatches = Array.isArray(data.matches) && data.matches.length > 0 ? data.matches : FALLBACK_MATCHES;
-            const newEvents = Array.isArray(data.events) && data.events.length > 0 ? data.events : FALLBACK_EVENTS;
-            const newJourney = data.config && Array.isArray(data.config.journey) ? data.config.journey : DEFAULT_JOURNEY;
-            const newFooter = data.config && data.config.footer ? data.config.footer : DEFAULT_FOOTER;
+          setClubs(newClubs);
+          setMatches(newMatches);
+          setEvents(newEvents);
+          setJourney(newJourney);
+          setFooterConfig(newFooter);
 
-            setClubs(newClubs);
-            setMatches(newMatches);
-            setEvents(newEvents);
-            setJourney(newJourney);
-            setFooterConfig(newFooter);
+          const payload = {
+            clubs: newClubs,
+            matches: newMatches,
+            events: newEvents,
+            journey: newJourney,
+            footerConfig: newFooter
+          };
+          cachedLandingPayload = payload;
+          try {
+            localStorage.setItem(LANDING_CACHE_KEY, JSON.stringify(payload));
+          } catch {}
+        }
+      })
+      .catch((err) => {
+        console.warn('Master Landing data fetch error:', err);
+      });
 
-            cachedLandingPayload = {
-              clubs: newClubs,
-              matches: newMatches,
-              events: newEvents,
-              journey: newJourney,
-              footerConfig: newFooter
-            };
-
-            try {
-              localStorage.setItem(LANDING_CACHE_KEY, JSON.stringify(cachedLandingPayload));
-            } catch {}
-          }
-        })
-        .catch((err) => {
-          console.warn('Master Landing data fetch error:', err);
-        })
-        .finally(() => {
-          pendingLandingFetch = null;
-        });
-    }
-
-    // 3. Check Auth State via existing /api/auth/me in parallel
+    // 2. Check Auth State via existing /api/auth/me in parallel
     const authPromise = fetch('/api/auth/me')
       .then((res) => res.json())
       .then((res) => {
@@ -111,11 +101,11 @@ export default function MasterLandingPage() {
         setUser(null);
       });
 
-    // Dismiss preloader once initial requests complete
-    Promise.all([pendingLandingFetch, authPromise]).finally(() => {
+    // Immediately show page as soon as required landing data & auth are ready (no artificial delays)
+    Promise.all([dataPromise, authPromise]).finally(() => {
       setIsLoading(false);
     });
-  }, [initPayload]);
+  }, []);
 
   return (
     <div className="aceit-master-landing">
@@ -143,6 +133,7 @@ export default function MasterLandingPage() {
             alt="ACEIT Sports"
             width={80}
             height={80}
+            decoding="async"
             style={{
               objectFit: 'contain',
               filter: 'drop-shadow(0 0 25px rgba(0, 240, 255, 0.45)) drop-shadow(0 0 45px rgba(255, 122, 26, 0.3))'

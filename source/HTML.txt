@@ -1257,6 +1257,17 @@
       justify-content: center;
       background-size: cover;
       background-position: center;
+      overflow: hidden;
+    }
+
+    .player-photo-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      z-index: 1;
     }
 
     .player-photo .jersey-num {
@@ -1284,6 +1295,7 @@
       border-radius: 8px;
       opacity: 1;
       line-height: 1;
+      z-index: 2;
     }
 
     .player-photo.has-photo .silhouette {
@@ -1302,6 +1314,7 @@
       letter-spacing: 0.08em;
       padding: 5px 10px;
       border-radius: 999px;
+      z-index: 2;
       text-transform: uppercase;
       box-shadow: var(--shadow-sm);
     }
@@ -1514,292 +1527,125 @@
     .matches-grid {
       display: grid;
       grid-template-columns: 1fr;
-      justify-content: center;
-      gap: var(--space-4);
+      gap: var(--space-3);
       margin-top: var(--space-5);
-      max-width: 760px;
-      margin-left: auto;
-      margin-right: auto;
     }
 
+    @media(min-width:760px) {
+      .matches-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .matches-grid .match-card,
     .match-card {
-      background: #0d1527;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 18px;
-      padding: 26px 30px;
+      background: var(--bg-glass-card, var(--white));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle, var(--border));
+      border-radius: var(--radius-lg, 16px);
+      padding: 22px 24px;
+      position: relative;
+      overflow: hidden;
       display: flex !important;
       flex-direction: column !important;
-      position: relative;
-      overflow: visible;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-      box-sizing: border-box;
-      transition: transform .3s ease, box-shadow .3s ease;
+      box-sizing: border-box !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      transition: transform .3s var(--ease), border-color .3s var(--ease), box-shadow .3s var(--ease);
     }
 
-    [data-theme="light"] .match-card {
-      background: #ffffff;
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    }
-
+    .matches-grid .match-card:hover,
     .match-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+      transform: translateY(-3px);
+      border-color: var(--border-hover, rgba(255, 255, 255, 0.2));
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     }
 
     .match-top {
-      display: flex !important;
-      flex-direction: row !important;
-      justify-content: space-between !important;
-      align-items: center !important;
-      width: 100% !important;
-      margin-bottom: 22px !important;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-2);
+      width: 100%;
     }
 
     .status-badge {
-      font-family: var(--font-mono, monospace);
-      font-size: 11px;
-      padding: 4px 14px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 4px 12px;
       border-radius: 999px;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       font-weight: 700;
     }
 
     .status-upcoming {
-      background: rgba(245, 166, 35, 0.18);
-      color: #f5a623;
-      border: 1px solid rgba(245, 166, 35, 0.3);
+      background: #FDEBD0;
+      color: #B85C00;
     }
 
-    [data-theme="light"] .status-upcoming {
-      background: #fef3c7;
-      color: #b45309;
-      border: 1px solid #fde68a;
-    }
-
-    .status-completed {
-      background: rgba(46, 125, 50, 0.22);
-      color: #8bc34a;
-      border: 1px solid rgba(139, 195, 74, 0.35);
-    }
-
-    [data-theme="light"] .status-completed {
-      background: #e8f5e9;
-      color: #2e7d32;
-      border: 1px solid #c8e6c9;
+    [data-theme="dark"] .status-upcoming {
+      background: #3a2a10;
+      color: #F5A623;
     }
 
     .status-live {
-      background: rgba(239, 68, 68, 0.22);
+      background: #FDE0E0;
+      color: #C0392B;
+    }
+
+    [data-theme="dark"] .status-live {
+      background: #3a1414;
       color: #ff7a6b;
-      border: 1px solid rgba(239, 68, 68, 0.4);
-    }
-
-    [data-theme="light"] .status-live {
-      background: #fee2e2;
-      color: #b91c1c;
-      border: 1px solid #fecaca;
-    }
-
-    .match-fixture-tag {
-      font-family: var(--font-mono, monospace);
-      font-size: 13px;
-      font-weight: 600;
-      color: #8fa0b5;
-      letter-spacing: 0.05em;
     }
 
     .match-teams {
-      display: flex !important;
-      flex-direction: row !important;
-      align-items: center !important;
-      justify-content: space-around !important;
-      gap: 20px !important;
-      margin: 8px 0 24px 0 !important;
-      width: 100% !important;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+      margin: var(--space-2) 0;
     }
 
     .match-team {
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      justify-content: center !important;
-      text-align: center !important;
-      flex: 1 !important;
-      max-width: 220px !important;
-      position: relative;
+      text-align: center;
+      flex: 1;
     }
 
     .match-team .crest {
-      width: 68px !important;
-      height: 68px !important;
-      border-radius: 50% !important;
-      background: radial-gradient(circle, #1e293b 0%, #0f172a 100%) !important;
-      border: 2px solid rgba(255, 255, 255, 0.12) !important;
-      margin: 0 auto 12px auto !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      color: #fff !important;
-      font-family: var(--font-mono, monospace) !important;
-      font-size: 26px !important;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-      overflow: hidden;
-    }
-
-    .match-team .crest .crest-img {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: contain !important;
-      border-radius: 50% !important;
-      display: block;
-    }
-
-    .match-team.winner .crest,
-    .match-team .crest.crest-winner {
-      border: 2.5px solid #ff9f1c !important;
-      box-shadow: 0 0 24px rgba(255, 159, 28, 0.45), 0 0 8px rgba(255, 159, 28, 0.3) !important;
-      transform: scale(1.04);
-    }
-
-    .match-team strong {
-      display: block !important;
-      font-family: var(--font-display, sans-serif) !important;
-      font-size: 16px !important;
-      font-weight: 800 !important;
-      color: var(--charcoal) !important;
-      text-transform: uppercase !important;
-      letter-spacing: 0.06em !important;
-      line-height: 1.25 !important;
-      margin: 0 0 6px 0 !important;
-    }
-
-    [data-theme="dark"] .match-team strong {
-      color: #ffffff !important;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(160deg, var(--navy), var(--navy-2));
+      margin: 0 auto 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 12px;
     }
 
     .match-vs {
-      font-family: var(--font-display, sans-serif) !important;
-      font-size: 15px !important;
-      font-weight: 800 !important;
-      color: #64748b !important;
-      text-transform: uppercase !important;
-      letter-spacing: 0.1em !important;
-      padding: 0 10px !important;
-      flex-shrink: 0;
+      font-family: var(--font-mono);
+      color: var(--charcoal-soft);
+      font-size: 13px;
     }
 
-    .winner-badge {
-      display: inline-flex !important;
-      align-items: center !important;
-      gap: 5px !important;
-      background: linear-gradient(135deg, #ff9f1c 0%, #f57c00 100%) !important;
-      color: #ffffff !important;
-      font-family: var(--font-mono, monospace) !important;
-      font-size: 11px !important;
-      font-weight: 800 !important;
-      padding: 4px 14px !important;
-      border-radius: 999px !important;
-      margin-top: 4px !important;
-      letter-spacing: 0.06em !important;
-      box-shadow: 0 0 16px rgba(255, 159, 28, 0.5) !important;
-      text-transform: uppercase !important;
-    }
-
-    .match-score-box {
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      justify-content: center !important;
-      background: rgba(6, 10, 20, 0.65) !important;
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      border-radius: 12px !important;
-      padding: 12px 32px !important;
-      margin: 0 auto 22px auto !important;
-      width: 100% !important;
-      max-width: 320px !important;
-      box-sizing: border-box !important;
-      text-align: center !important;
-    }
-
-    [data-theme="light"] .match-score-box {
-      background: #f8fafc !important;
-      border: 1px solid #e2e8f0 !important;
-    }
-
-    .match-score-box.match-score-live {
-      background: rgba(231, 76, 60, 0.08) !important;
-      border: 1.5px solid rgba(231, 76, 60, 0.3) !important;
-    }
-
-    .match-score-title {
-      font-size: 11px !important;
-      font-weight: 700 !important;
-      color: #8fa0b5 !important;
-      letter-spacing: 0.12em !important;
-      text-transform: uppercase !important;
-      font-family: var(--font-mono, monospace) !important;
-      margin-bottom: 4px !important;
-    }
-
-    .match-score-digits {
-      font-size: 24px !important;
-      font-weight: 900 !important;
-      color: var(--charcoal) !important;
-      font-family: var(--font-mono, monospace) !important;
-      letter-spacing: 0.15em !important;
-      line-height: 1.2 !important;
-    }
-
-    [data-theme="dark"] .match-score-digits {
-      color: #ffffff !important;
-    }
-
-    .match-score-sub {
-      font-size: 11px !important;
-      color: #8fa0b5 !important;
-      font-weight: 600 !important;
-      margin-top: 3px !important;
-    }
-
+    .matches-grid .match-card .match-meta,
     .match-meta {
       display: flex !important;
       flex-direction: row !important;
       justify-content: space-between !important;
       align-items: center !important;
+      font-size: 13px;
+      color: var(--charcoal-soft);
+      border-top: 1px dashed var(--border);
+      padding-top: var(--space-2);
+      margin-top: var(--space-2);
       width: 100% !important;
-      border-top: 1px dashed rgba(255, 255, 255, 0.1) !important;
-      padding-top: 16px !important;
-      margin-top: 4px !important;
-      font-size: 13px !important;
-      color: #8fa0b5 !important;
       box-sizing: border-box !important;
-    }
-
-    [data-theme="light"] .match-meta {
-      border-top: 1px dashed rgba(0, 0, 0, 0.1) !important;
-    }
-
-    .match-meta-venue {
-      display: inline-flex !important;
-      align-items: center !important;
-      gap: 6px !important;
-      color: #e2e8f0 !important;
-      font-weight: 600 !important;
-    }
-
-    [data-theme="light"] .match-meta-venue {
-      color: var(--charcoal) !important;
-    }
-
-    .match-meta-date {
-      display: inline-flex !important;
-      align-items: center !important;
-      gap: 6px !important;
-      color: #8fa0b5 !important;
-      font-weight: 500 !important;
     }
 
     .countdown {
@@ -5875,8 +5721,8 @@
       <button class="lightbox-close" id="lightboxClose" aria-label="Close">×</button>
       <p class="mono" id="lightboxLabel"
         style="letter-spacing:0.1em;text-transform:uppercase;font-size:13px;color:#C9C2B2;">Gallery Image</p>
-      <img id="lightboxImg" style="max-width:100%; max-height:70vh; border-radius:8px; margin-top:12px; display:none;"
-        alt="Full Resolution Image" decoding="async">
+      <img id="lightboxImg" decoding="async" style="max-width:100%; max-height:70vh; border-radius:8px; margin-top:12px; display:none;"
+        alt="">
     </div>
   </div>
 
@@ -6662,6 +6508,19 @@
             burger.classList.remove('active');
             if (navClubsSub) navClubsSub.classList.remove('open');
             if (navClubsArrow) navClubsArrow.style.transform = '';
+            var href = a.getAttribute('href') || '';
+            if (href.indexOf('#') === 0) {
+              var targetId = href.substring(1).toLowerCase();
+              var targetSec = null;
+              if (targetId === 'team') targetSec = 'players';
+              else if (targetId === 'gallery') targetSec = 'gallery';
+              else if (targetId === 'matches') targetSec = 'matches';
+              else if (targetId === 'events') targetSec = 'events';
+              else if (targetId === 'notice-board') targetSec = 'notice-board';
+              if (targetSec && typeof loadClubSection === 'function') {
+                loadClubSection(targetSec);
+              }
+            }
           });
         });
         document.addEventListener('click', function (e) {
@@ -7196,9 +7055,6 @@
             .then(function (res) {
               if (res && res.success && res.data) {
                 DB = res.data;
-                if (typeof AceitSectionCache !== 'undefined') {
-                  AceitSectionCache.clearClub(activeClub);
-                }
                 renderAllPublic();
                 if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
                 if (typeof renderAllAdminTabs === 'function') renderAllAdminTabs();
@@ -7702,350 +7558,214 @@
       }
 
       /* ============================================================
-         PERFORMANCE CACHE & SECTION LAZY LOADING ENGINE
-         - Dual-layer cache: Fast in-memory Map + Persistent IndexedDB
-         - Keyed strictly by: club + ':' + section (e.g. spikers:players)
-         - Safe club isolation: Never mix clubs or sections
-         - Request deduplication: Active promises shared by club + section
+         DUAL-LAYER CLIENT CACHE & ON-DEMAND SECTION LOADER (AceitCache)
+         - Layer 1: In-memory Map (fastest, instant section switching)
+         - Layer 2: Persistent IndexedDB with localStorage fallback
+         - Request Deduplication: In-flight promises tracked per ${club}:${section}
+         - Club Isolation: Strict check ensuring active club matches
          ============================================================ */
-      var AceitSectionCache = (function () {
+      var AceitCache = (function () {
         var memCache = new Map();
         var pendingRequests = new Map();
-        var DB_NAME = 'AceitSportsSectionCache_v1';
-        var STORE_NAME = 'sections';
-        var idbPromise = null;
+        var dbPromise = null;
 
-        function getIDB() {
-          if (typeof window === 'undefined' || !window.indexedDB) return Promise.resolve(null);
-          if (!idbPromise) {
-            idbPromise = new Promise(function (resolve) {
-              try {
-                var req = window.indexedDB.open(DB_NAME, 1);
-                req.onupgradeneeded = function (e) {
-                  var db = e.target.result;
-                  if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.createObjectStore(STORE_NAME, { keyPath: 'cacheKey' });
-                  }
-                };
-                req.onsuccess = function (e) { resolve(e.target.result); };
-                req.onerror = function () { resolve(null); };
-              } catch (e) {
-                resolve(null);
-              }
-            });
-          }
-          return idbPromise;
-        }
-
-        function getStorageKey(club, section) {
-          return 'aceit_cache_' + String(club).toLowerCase() + ':' + String(section).toLowerCase();
-        }
-
-        function getCacheKey(club, section) {
-          return String(club).toLowerCase() + ':' + String(section).toLowerCase();
-        }
-
-        function get(club, section) {
-          var key = getCacheKey(club, section);
-          if (memCache.has(key)) {
-            return Promise.resolve(memCache.get(key));
-          }
-          return getIDB().then(function (db) {
-            if (db) {
-              return new Promise(function (resolve) {
-                try {
-                  var tx = db.transaction(STORE_NAME, 'readonly');
-                  var store = tx.objectStore(STORE_NAME);
-                  var req = store.get(key);
-                  req.onsuccess = function (e) {
-                    var record = e.target.result;
-                    if (record && record.data) {
-                      memCache.set(key, record.data);
-                      resolve(record.data);
-                    } else {
-                      resolve(null);
-                    }
-                  };
-                  req.onerror = function () { resolve(null); };
-                } catch (err) {
-                  resolve(null);
-                }
-              });
+        function openIDB() {
+          if (dbPromise) return dbPromise;
+          dbPromise = new Promise(function (resolve) {
+            if (typeof window === 'undefined' || !window.indexedDB) {
+              resolve(null);
+              return;
             }
             try {
-              var raw = localStorage.getItem(getStorageKey(club, section));
-              if (raw) {
-                var parsed = JSON.parse(raw);
-                if (parsed) {
-                  memCache.set(key, parsed);
-                  return parsed;
-                }
-              }
-            } catch (e) {}
-            return null;
-          });
-        }
-
-        function set(club, section, data) {
-          if (!data || typeof data !== 'object') return;
-          var key = getCacheKey(club, section);
-          memCache.set(key, data);
-
-          getIDB().then(function (db) {
-            if (db) {
-              try {
-                var tx = db.transaction(STORE_NAME, 'readwrite');
-                var store = tx.objectStore(STORE_NAME);
-                store.put({
-                  cacheKey: key,
-                  club: String(club).toLowerCase(),
-                  section: String(section).toLowerCase(),
-                  data: data,
-                  updatedAt: Date.now()
-                });
-              } catch (e) {}
-            }
-            try {
-              localStorage.setItem(getStorageKey(club, section), JSON.stringify(data));
-            } catch (e) {}
-          });
-        }
-
-        function getPending(club, section) {
-          var key = getCacheKey(club, section);
-          return pendingRequests.get(key) || null;
-        }
-
-        function setPending(club, section, promise) {
-          var key = getCacheKey(club, section);
-          pendingRequests.set(key, promise);
-          promise.finally(function () {
-            pendingRequests.delete(key);
-          });
-        }
-
-        function clearClub(club) {
-          var cNorm = String(club).toLowerCase();
-          for (var key of memCache.keys()) {
-            if (key.startsWith(cNorm + ':')) {
-              memCache.delete(key);
-            }
-          }
-          getIDB().then(function (db) {
-            if (!db) return;
-            try {
-              var tx = db.transaction(STORE_NAME, 'readwrite');
-              var store = tx.objectStore(STORE_NAME);
-              var cursorReq = store.openCursor();
-              cursorReq.onsuccess = function (e) {
-                var cursor = e.target.result;
-                if (cursor) {
-                  if (cursor.value && cursor.value.club === cNorm) {
-                    cursor.delete();
-                  }
-                  cursor.continue();
+              var req = window.indexedDB.open('AceitSportsCacheDB', 1);
+              req.onupgradeneeded = function (e) {
+                var db = e.target.result;
+                if (!db.objectStoreNames.contains('section_cache')) {
+                  db.createObjectStore('section_cache');
                 }
               };
-            } catch (e) {}
+              req.onsuccess = function (e) { resolve(e.target.result); };
+              req.onerror = function () { resolve(null); };
+            } catch (err) {
+              resolve(null);
+            }
           });
+          return dbPromise;
+        }
+
+        function getStorageFallback(key) {
+          try {
+            var raw = localStorage.getItem('aceit_sec_' + key);
+            return raw ? JSON.parse(raw) : null;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        function setStorageFallback(key, val) {
+          try {
+            localStorage.setItem('aceit_sec_' + key, JSON.stringify(val));
+          } catch (e) {}
         }
 
         return {
-          get: get,
-          set: set,
-          getPending: getPending,
-          setPending: setPending,
-          clearClub: clearClub,
-          getCacheKey: getCacheKey
+          getMem: function (club, section) {
+            return memCache.get((club + ':' + section).toLowerCase()) || null;
+          },
+          setMem: function (club, section, data) {
+            memCache.set((club + ':' + section).toLowerCase(), data);
+          },
+          getIdb: function (club, section) {
+            var key = (club + ':' + section).toLowerCase();
+            return openIDB().then(function (db) {
+              if (!db) return getStorageFallback(key);
+              return new Promise(function (resolve) {
+                try {
+                  var tx = db.transaction('section_cache', 'readonly');
+                  var store = tx.objectStore('section_cache');
+                  var req = store.get(key);
+                  req.onsuccess = function () { resolve(req.result || getStorageFallback(key)); };
+                  req.onerror = function () { resolve(getStorageFallback(key)); };
+                } catch (e) {
+                  resolve(getStorageFallback(key));
+                }
+              });
+            });
+          },
+          setIdb: function (club, section, data) {
+            var key = (club + ':' + section).toLowerCase();
+            setStorageFallback(key, data);
+            openIDB().then(function (db) {
+              if (!db) return;
+              try {
+                var tx = db.transaction('section_cache', 'readwrite');
+                var store = tx.objectStore('section_cache');
+                store.put(data, key);
+              } catch (e) {}
+            });
+          },
+          getPending: function (club, section) {
+            return pendingRequests.get((club + ':' + section).toLowerCase()) || null;
+          },
+          setPending: function (club, section, promise) {
+            var key = (club + ':' + section).toLowerCase();
+            pendingRequests.set(key, promise);
+            promise.finally(function () {
+              if (pendingRequests.get(key) === promise) {
+                pendingRequests.delete(key);
+              }
+            });
+          },
+          clearMem: function () {
+            memCache.clear();
+          }
         };
       })();
 
-      function mergeSectionData(data, section) {
+      function applySectionDataToDB(section, data) {
         if (!data || typeof data !== 'object') return;
-        if (!DB) DB = loadDB();
-
-        if (Array.isArray(data.training)) DB.training = data.training;
-        if (Array.isArray(data.slideshow)) DB.slideshow = data.slideshow;
-        if (Array.isArray(data.team)) DB.team = data.team;
-        if (Array.isArray(data.gallery)) DB.gallery = data.gallery;
-        if (Array.isArray(data.matches)) DB.matches = data.matches;
-        if (Array.isArray(data.news)) DB.news = data.news;
-        if (Array.isArray(data.sponsors)) DB.sponsors = data.sponsors;
-        if (Array.isArray(data.testimonials)) DB.testimonials = data.testimonials;
-        if (Array.isArray(data.stats)) DB.stats = data.stats;
-        if (Array.isArray(data.events)) DB.events = data.events;
-        if (data.about && typeof data.about === 'object') DB.about = data.about;
-        if (data.contact && typeof data.contact === 'object') DB.contact = data.contact;
-
-        if (data.categories && typeof data.categories === 'object') {
-          DB.categories = Object.assign({}, DB.categories || {}, data.categories);
-        }
-        if (data.deletedCategories && typeof data.deletedCategories === 'object') {
-          DB.deletedCategories = Object.assign({}, DB.deletedCategories || {}, data.deletedCategories);
-        }
-        if (data.customCategories && typeof data.customCategories === 'object') {
-          DB.customCategories = Object.assign({}, DB.customCategories || {}, data.customCategories);
-        }
-      }
-
-      function renderSectionByName(section) {
-        var sec = String(section || '').toLowerCase();
-        if (sec === 'players' || sec === 'team') {
-          renderTeamPublic();
-        } else if (sec === 'gallery') {
-          renderGalleryPublic();
-        } else if (sec === 'matches') {
-          renderMatchesPublic();
-        } else if (sec === 'events') {
-          renderEventsPublic();
-        } else if (sec === 'notice-board' || sec === 'news') {
-          renderNewsPublic();
-          if (typeof renderPublicAnnouncements === 'function') renderPublicAnnouncements('all');
-        } else if (sec === 'home') {
+        if (section === 'home') {
+          if (Array.isArray(data.slideshow)) DB.slideshow = data.slideshow;
+          if (Array.isArray(data.sponsors)) DB.sponsors = data.sponsors;
+          if (Array.isArray(data.testimonials)) DB.testimonials = data.testimonials;
+          if (Array.isArray(data.stats)) DB.stats = data.stats;
+          if (Array.isArray(data.training)) DB.training = data.training;
+          if (data.about && typeof data.about === 'object') DB.about = data.about;
+          if (data.contact && typeof data.contact === 'object') DB.contact = data.contact;
           renderSlideshowPublic();
-          renderAboutPublic();
-          renderTrainingPublic();
-          renderStatsPublic();
           renderSponsorsPublic();
           renderTestimonialsPublic();
+          renderStatsPublic();
+          renderTrainingPublic();
+          renderAboutPublic();
           renderContactPublic();
-          renderPublicClubs();
+        } else if (section === 'players' || section === 'team') {
+          if (Array.isArray(data.team)) DB.team = data.team;
+          if (data.categories) DB.categories = data.categories;
+          if (data.customCategories) DB.customCategories = data.customCategories;
+          if (data.deletedCategories) DB.deletedCategories = data.deletedCategories;
+          renderTeamPublic();
+        } else if (section === 'gallery') {
+          if (Array.isArray(data.gallery)) DB.gallery = data.gallery;
+          if (data.categories) DB.categories = data.categories;
+          if (data.customCategories) DB.customCategories = data.customCategories;
+          if (data.deletedCategories) DB.deletedCategories = data.deletedCategories;
+          renderGalleryPublic();
+        } else if (section === 'matches') {
+          if (Array.isArray(data.matches)) DB.matches = data.matches;
+          renderMatchesPublic();
+        } else if (section === 'events') {
+          if (Array.isArray(data.events)) DB.events = data.events;
+          renderEventsPublic();
+        } else if (section === 'notice-board' || section === 'news') {
+          if (Array.isArray(data.news)) DB.news = data.news;
+          renderNewsPublic();
         }
       }
 
-      function loadClubSection(clubId, section, cb) {
-        var targetClub = String(clubId || getActiveClubId() || 'spikers').toLowerCase();
-        var secName = String(section || 'home').toLowerCase();
+      function loadClubSection(section, callback) {
+        var activeClub = getActiveClubId().toLowerCase();
+        var sec = (section || 'home').toLowerCase();
+        if (sec === 'team') sec = 'players';
+        if (sec === 'news') sec = 'notice-board';
 
-        // 1. Try cache first (immediate render!)
-        AceitSectionCache.get(targetClub, secName).then(function (cachedData) {
-          // Verify user hasn't switched clubs while checking cache
-          var currentClub = String(getActiveClubId() || '').toLowerCase();
-          if (currentClub !== targetClub) return;
+        // 1. In-memory check (instant)
+        var inMem = AceitCache.getMem(activeClub, sec);
+        if (inMem) {
+          if (getActiveClubId().toLowerCase() === activeClub) {
+            applySectionDataToDB(sec, inMem);
+          }
+          if (callback) callback(inMem);
+          return Promise.resolve(inMem);
+        }
 
-          if (cachedData) {
-            mergeSectionData(cachedData, secName);
-            renderSectionByName(secName);
-            if (cb) cb(true, cachedData);
-            return;
+        // 2. In-flight request deduplication
+        var pending = AceitCache.getPending(activeClub, sec);
+        if (pending) {
+          return pending.then(function (data) {
+            if (getActiveClubId().toLowerCase() === activeClub) {
+              applySectionDataToDB(sec, data);
+            }
+            if (callback) callback(data);
+            return data;
+          });
+        }
+
+        // 3. Persistent IndexedDB check before fetching from network
+        var fetchPromise = AceitCache.getIdb(activeClub, sec).then(function (cached) {
+          if (cached) {
+            AceitCache.setMem(activeClub, sec, cached);
+            if (getActiveClubId().toLowerCase() === activeClub) {
+              applySectionDataToDB(sec, cached);
+            }
+            if (callback) callback(cached);
+            return cached;
           }
 
-          // 2. Cache miss: check for pending request deduplication
-          var existingReq = AceitSectionCache.getPending(targetClub, secName);
-          if (existingReq) {
-            existingReq.then(function (resData) {
-              if (String(getActiveClubId() || '').toLowerCase() === targetClub) {
-                mergeSectionData(resData, secName);
-                renderSectionByName(secName);
-              }
-              if (cb) cb(true, resData);
-            }).catch(function (err) {
-              if (cb) cb(false, err);
-            });
-            return;
-          }
-
-          // 3. Perform network fetch for ONLY this section
-          var fetchPromise = authFetch(API_BASE + '/db?clubId=' + encodeURIComponent(targetClub) + '&section=' + encodeURIComponent(secName))
-            .then(function (r) { return r.json(); })
+          // 4. Network fetch with section query
+          return authFetch(API_BASE + '/db?clubId=' + encodeURIComponent(activeClub) + '&section=' + encodeURIComponent(sec))
+            .then(function (res) { return res.json(); })
             .then(function (res) {
               if (res && res.success && res.data) {
-                AceitSectionCache.set(targetClub, secName, res.data);
-                if (String(getActiveClubId() || '').toLowerCase() === targetClub) {
-                  mergeSectionData(res.data, secName);
-                  renderSectionByName(secName);
+                AceitCache.setMem(activeClub, sec, res.data);
+                AceitCache.setIdb(activeClub, sec, res.data);
+                if (getActiveClubId().toLowerCase() === activeClub) {
+                  applySectionDataToDB(sec, res.data);
                 }
+                if (callback) callback(res.data);
                 return res.data;
               }
-              throw new Error(res ? res.message : 'Failed to load section');
+              return null;
+            })
+            .catch(function (err) {
+              console.warn('[Section Load Error]', sec, err);
+              return null;
             });
-
-          AceitSectionCache.setPending(targetClub, secName, fetchPromise);
-
-          fetchPromise.then(function (data) {
-            if (cb) cb(true, data);
-          }).catch(function (err) {
-            console.warn('[Section Load Error]', targetClub, secName, err);
-            if (cb) cb(false, err);
-          });
         });
+
+        AceitCache.setPending(activeClub, sec, fetchPromise);
+        return fetchPromise;
       }
-
-      function getInitialSection() {
-        var hash = (window.location.hash || '').replace('#', '').trim().toLowerCase();
-        if (hash === 'team' || hash === 'players') return 'players';
-        if (hash === 'gallery') return 'gallery';
-        if (hash === 'matches') return 'matches';
-        if (hash === 'events') return 'events';
-        if (hash === 'notice-board' || hash === 'announcements' || hash === 'news') return 'notice-board';
-        return 'home';
-      }
-
-      var _sectionObserver = null;
-      function initSectionObservers() {
-        if (typeof IntersectionObserver === 'undefined') return;
-        if (_sectionObserver) {
-          _sectionObserver.disconnect();
-          _sectionObserver = null;
-        }
-
-        var sectionElements = [
-          { id: 'team', section: 'players' },
-          { id: 'gallery', section: 'gallery' },
-          { id: 'matches', section: 'matches' },
-          { id: 'events', section: 'events' },
-          { id: 'notice-board', section: 'notice-board' }
-        ];
-
-        _sectionObserver = new IntersectionObserver(function (entries) {
-          entries.forEach(function (entry) {
-            if (entry.isIntersecting) {
-              var sec = entry.target.getAttribute('data-aceit-section');
-              if (sec) {
-                loadClubSection(getActiveClubId(), sec);
-                if (_sectionObserver) _sectionObserver.unobserve(entry.target);
-              }
-            }
-          });
-        }, { rootMargin: '300px 0px' });
-
-        sectionElements.forEach(function (item) {
-          var el = document.getElementById(item.id);
-          if (el) {
-            el.setAttribute('data-aceit-section', item.section);
-            _sectionObserver.observe(el);
-          }
-        });
-      }
-
-      function handleSectionHashNavigation(optHash) {
-        var clean = (optHash || window.location.hash || '').replace('#', '').trim().toLowerCase();
-        var sec = null;
-        if (clean === 'team' || clean === 'players') sec = 'players';
-        else if (clean === 'gallery') sec = 'gallery';
-        else if (clean === 'matches') sec = 'matches';
-        else if (clean === 'events') sec = 'events';
-        else if (clean === 'notice-board' || clean === 'announcements' || clean === 'news') sec = 'notice-board';
-        else if (clean === 'hero' || clean === 'hero-slideshow' || clean === 'about' || clean === 'contact' || clean === 'sponsors' || clean === 'testimonials' || clean === 'clubs' || !clean) sec = 'home';
-
-        if (sec) {
-          loadClubSection(getActiveClubId(), sec);
-        }
-      }
-
-      window.addEventListener('hashchange', function () {
-        handleSectionHashNavigation();
-      });
-      window.addEventListener('popstate', function () {
-        handleSectionHashNavigation();
-      });
-      document.addEventListener('click', function (e) {
-        var link = e.target && e.target.closest ? e.target.closest('a[href^="#"]') : null;
-        if (link) {
-          var href = link.getAttribute('href');
-          handleSectionHashNavigation(href);
-        }
-      }, true);
 
       var _lastSyncedClub = null;
       function syncDBOnline(onComplete) {
@@ -8071,7 +7791,7 @@
           applyClubBranding(foundClub);
         }
 
-        // Parallelize club metadata fetch
+        // Parallelize club metadata and home section requests
         var clubMetaReq = authFetch(API_BASE + '/clubs/' + encodeURIComponent(activeClub))
           .then(function (r) { return r.json(); })
           .then(function (res) {
@@ -8081,10 +7801,10 @@
           })
           .catch(function (e) { console.warn('Club metadata fetch error', e); });
 
-        // Load ONLY the currently visible section first, then initialize lazy observers
-        var initSec = getInitialSection();
-        loadClubSection(activeClub, initSec, function () {
-          initSectionObservers();
+        var homeSectionReq = loadClubSection('home');
+        var teamSectionReq = loadClubSection('players');
+
+        Promise.all([clubMetaReq, homeSectionReq, teamSectionReq]).then(function () {
           if (onComplete) onComplete();
         });
       }
@@ -8355,11 +8075,14 @@
           var pCats = getCategories(p);
           var catBadge = pCats.length ? ' &middot; ' + esc(formatCategories(pCats)) : '';
           var jerseyNum = p.num !== undefined && p.num !== null && p.num !== '' ? p.num : (p.no !== undefined && p.no !== null && p.no !== '' ? p.no : (p.jerseyNo || '—'));
+          var photoImg = hasPhoto
+            ? '<img src="' + esc(p.photo) + '" alt="' + esc(p.n || 'Player Photo') + '" class="player-photo-img" loading="lazy" decoding="async">'
+            : '';
           el.innerHTML =
             '<div class="player-photo' + (hasPhoto ? ' has-photo' : '') + '">' +
-            (hasPhoto ? '<img src="' + esc(p.photo) + '" alt="' + esc(p.n) + '" loading="lazy" decoding="async" class="player-photo-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;border-radius:inherit;" onerror="this.style.display=\'none\';">' : '') +
-            '<span class="jersey-num mono" style="z-index:2;">#' + jerseyNum + '</span><div class="silhouette" style="z-index:2;"></div>' +
-            (p.cap ? '<span class="captain-badge" style="z-index:3;">Captain</span>' : '') +
+            photoImg +
+            '<span class="jersey-num mono">#' + jerseyNum + '</span><div class="silhouette"></div>' +
+            (p.cap ? '<span class="captain-badge">Captain</span>' : '') +
             '</div>' +
             '<div class="player-info"><h3>' + esc(p.n) + '</h3><div class="player-pos">' + esc(p.pos || p.r || 'Player') + catBadge + '</div>' +
             '<div class="player-stats"><span>Height<b>' + esc(p.h || '—') + '</b></span><span>Experience<b>' + esc(p.exp || '—') + '</b></span><span>Jersey<b>#' + jerseyNum + '</b></span></div>' +
@@ -8557,10 +8280,7 @@
           var el = document.createElement('div');
           el.className = 'match-card card reveal visible';
           var d = new Date(m.date);
-          var dateOnlyStr = isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-          var timeStr = (!isNaN(d.getTime()) && (d.getHours() !== 0 || d.getMinutes() !== 0 || String(m.date).includes('T'))) ? d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
-          var dateStr = dateOnlyStr + (timeStr ? (' • ' + timeStr) : '');
-          var venueStr = (m.venue && String(m.venue).trim()) ? esc(m.venue) : 'ACEIT Sports Complex';
+          var dateStr = isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
           var statusClass = m.status === 'live' ? 'status-live' : (m.status === 'completed' ? 'status-completed' : 'status-upcoming');
           var statusLabel = m.status === 'live' ? 'Live' : (m.status === 'completed' ? 'Completed' : 'Upcoming');
 
@@ -8593,59 +8313,40 @@
             var setsWonA = m.setsWonAway || 0;
             var setNumber = m.liveSetNumber || 1;
 
-            scoreDisplayHtml = '<div class="match-score-box match-score-live">' +
-              '<div class="match-score-title" style="display:flex;justify-content:center;align-items:center;gap:6px;color:#ff7a6b;">' +
-              '<span class="live-pulse-dot"></span>LIVE SCORE &middot; SET ' + setNumber +
+            scoreDisplayHtml = '<div style="margin:10px 0;text-align:center;background:rgba(231,76,60,0.08);border:1.5px solid rgba(231,76,60,0.3);border-radius:10px;padding:8px 12px;">' +
+              '<div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-bottom:4px;">' +
+              '<span class="live-pulse-dot"></span><b style="color:#E74C3C;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;">LIVE SCORE &middot; SET ' + setNumber + '</b>' +
               '</div>' +
-              '<div class="match-score-digits">' + liveHome + ' &mdash; ' + liveAway + '</div>' +
-              (setsWonH > 0 || setsWonA > 0 ? '<div class="match-score-sub">Sets: ' + setsWonH + ' - ' + setsWonA + '</div>' : '') +
+              '<div style="font-size:22px;font-weight:900;font-family:var(--font-mono);color:var(--charcoal);letter-spacing:1px;">' + liveHome + ' &mdash; ' + liveAway + '</div>' +
+              (setsWonH > 0 || setsWonA > 0 ? '<div style="font-size:11px;color:var(--charcoal-soft);font-weight:600;margin-top:2px;">Sets: ' + setsWonH + ' - ' + setsWonA + '</div>' : '') +
               '</div>';
           } else if (m.status === 'completed') {
             var scoreSummary = m.scoreSummary || m.liveSummary || m.sets || (s1 !== null && s2 !== null ? (s1 + ' - ' + s2) : '');
-            var scoreVal = (s1 !== null && s2 !== null ? (s1 + ' &mdash; ' + s2) : (scoreSummary ? esc(scoreSummary) : '0 &mdash; 0'));
-            scoreDisplayHtml = '<div class="match-score-box">' +
-              '<div class="match-score-title">FINAL MATCH SCORE</div>' +
-              '<div class="match-score-digits">' + scoreVal + '</div>' +
-              (m.sets && m.sets !== (s1 + ' - ' + s2) ? '<div class="match-score-sub">' + esc(m.sets) + '</div>' : '') +
-              '</div>';
-          }
-
-          var venueStr = esc(m.venue || 'ACEIT Sports Complex');
-          var dateDisplay = dateStr || (m.date ? esc(m.date) : '15 Sept 2026');
-          var timeDisplay = '';
-          if (m.time) {
-            timeDisplay = ' &bull; ' + esc(m.time);
-          } else if (!isNaN(d.getTime())) {
-            var hrs = d.getHours();
-            var mins = d.getMinutes();
-            if (hrs !== 0 || mins !== 0) {
-              var ampm = hrs >= 12 ? 'pm' : 'am';
-              var h12 = hrs % 12 || 12;
-              var minStr = mins < 10 ? '0' + mins : mins;
-              timeDisplay = ' &bull; ' + h12 + ':' + minStr + ' ' + ampm;
-            } else {
-              timeDisplay = ' &bull; 5:00 pm';
+            if (scoreSummary || (s1 !== null && s2 !== null)) {
+              scoreDisplayHtml = '<div style="margin:10px 0;text-align:center;background:var(--cream-2);border:1px solid var(--border);border-radius:10px;padding:6px 10px;">' +
+                '<div style="font-size:10px;font-family:var(--font-mono);text-transform:uppercase;color:var(--charcoal-soft);font-weight:700;">Final Match Score</div>' +
+                '<div style="font-size:18px;font-weight:800;font-family:var(--font-mono);color:var(--charcoal);">' + (s1 !== null && s2 !== null ? (s1 + ' &mdash; ' + s2) : esc(scoreSummary)) + '</div>' +
+                (m.sets && m.sets !== (s1 + ' - ' + s2) ? '<div style="font-size:11px;color:var(--charcoal-soft);">' + esc(m.sets) + '</div>' : '') +
+                '</div>';
             }
-          } else {
-            timeDisplay = ' &bull; 5:00 pm';
           }
 
           el.innerHTML =
             '<div class="match-top">' +
             '<span class="status-badge ' + statusClass + '">' + statusLabel + '</span>' +
-            '<span class="match-fixture-tag">Fixture 0' + (i + 1) + '</span>' +
+            '<span class="mono" style="font-size:12px;color:var(--charcoal-soft);">Fixture 0' + (i + 1) + '</span>' +
             '</div>' +
             '<div class="match-teams">' +
             '<div class="match-team' + (isWinner1 ? ' winner' : '') + '">' +
             '<div class="crest' + (m.team1Logo ? ' has-img' : '') + (isWinner1 ? ' crest-winner' : '') + '">' + t1CrestContent + '</div>' +
             '<strong>' + esc(team1Name) + '</strong>' +
-            (isWinner1 ? '<div class="winner-badge">&#127942; WINNER</div>' : '') +
+            (isWinner1 ? '<div class="winner-badge">🏆 WINNER</div>' : '') +
             '</div>' +
             '<div class="match-vs">VS</div>' +
             '<div class="match-team' + (isWinner2 ? ' winner' : '') + '">' +
             '<div class="crest' + (m.team2Logo ? ' has-img' : '') + (isWinner2 ? ' crest-winner' : '') + '">' + t2CrestContent + '</div>' +
             '<strong>' + esc(team2Name) + '</strong>' +
-            (isWinner2 ? '<div class="winner-badge">&#127942; WINNER</div>' : '') +
+            (isWinner2 ? '<div class="winner-badge">🏆 WINNER</div>' : '') +
             '</div>' +
             '</div>' +
             (isDraw ? '<div style="text-align:center;margin:-4px 0 8px;"><span class="draw-badge">🤝 MATCH DRAW</span></div>' : '') +
@@ -8657,10 +8358,7 @@
               '<div><div class="cd-num cd-m">00</div><div class="cd-label">Min</div></div>' +
               '<div><div class="cd-num cd-s">00</div><div class="cd-label">Sec</div></div>' +
               '</div>') : '') +
-            '<div class="match-meta">' +
-            '<span class="match-meta-venue">&#128205; ' + venueStr + '</span>' +
-            '<span class="match-meta-date">&#128197; ' + dateDisplay + timeDisplay + '</span>' +
-            '</div>';
+            '<div class="match-meta"><span>&#128205; ' + esc(m.venue) + '</span><span>' + dateStr + '</span></div>';
           matchesGrid.appendChild(el);
         });
         updateCountdowns();
@@ -9271,7 +8969,60 @@
       }
       renderAllPublic();
       fetchLandingFooterConfig();
+
+      // Initial section detection from URL hash
+      function getInitialSectionFromHash() {
+        var h = (window.location.hash || '').toLowerCase().replace(/^#/, '');
+        if (h === 'team' || h === 'players') return 'players';
+        if (h === 'gallery') return 'gallery';
+        if (h === 'matches') return 'matches';
+        if (h === 'events') return 'events';
+        if (h === 'notice-board' || h === 'news' || h === 'announcements') return 'notice-board';
+        return 'home';
+      }
+
+      var initialSec = getInitialSectionFromHash();
+      if (initialSec !== 'home') {
+        loadClubSection(initialSec);
+      }
       syncDBOnline();
+
+      // IntersectionObserver for lazy loading below-the-fold sections on scroll
+      if ('IntersectionObserver' in window) {
+        var sectionObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              var id = entry.target.id;
+              var targetSec = null;
+              if (id === 'team') targetSec = 'players';
+              else if (id === 'gallery') targetSec = 'gallery';
+              else if (id === 'matches') targetSec = 'matches';
+              else if (id === 'events') targetSec = 'events';
+              else if (id === 'notice-board') targetSec = 'notice-board';
+
+              if (targetSec) {
+                loadClubSection(targetSec);
+                sectionObserver.unobserve(entry.target);
+              }
+            }
+          });
+        }, { rootMargin: '250px 0px' });
+
+        ['team', 'gallery', 'matches', 'events', 'notice-board'].forEach(function (id) {
+          var secEl = document.getElementById(id);
+          if (secEl) sectionObserver.observe(secEl);
+        });
+      }
+
+      // Handle browser back/forward and hash changes instantly from cache
+      window.addEventListener('hashchange', function () {
+        var sec = getInitialSectionFromHash();
+        if (sec) loadClubSection(sec);
+      });
+      window.addEventListener('popstate', function () {
+        var sec = getInitialSectionFromHash();
+        if (sec) loadClubSection(sec);
+      });
 
       /* ============ JOIN FORM VALIDATION & TALLY BACKGROUND SUBMISSION ============ */
       var joinForm = document.getElementById('joinForm');

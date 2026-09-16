@@ -22,6 +22,8 @@ export default function MasterLandingFooter({ config }: MasterLandingFooterProps
                 className="footer-crest"
                 width={42}
                 height={42}
+                loading="lazy"
+                decoding="async"
                 style={{ objectFit: 'contain' }}
               />
               <span className="footer-brand-name">{config.brand || 'ACEIT SPORTS'}</span>
