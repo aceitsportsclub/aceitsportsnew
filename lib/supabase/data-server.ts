@@ -188,7 +188,7 @@ async function resolveClubId(supabase: SupabaseClient, clubRef: string): Promise
   throw new Error('CLUB_NOT_FOUND');
 }
 
-export async function readContent(clubId: string, client?: SupabaseClient, section?: string) {
+export async function readContent(clubId: string, client?: SupabaseClient, section?: string | { section?: string }) {
   const supabase = client || await createSupabaseAuthServerClient();
   const cleanRef = (clubId || '').trim().toLowerCase();
   const isAll = cleanRef === 'all';
@@ -217,7 +217,8 @@ export async function readContent(clubId: string, client?: SupabaseClient, secti
     applications: []
   };
 
-  const cleanSection = section ? section.trim().toLowerCase() : undefined;
+  const rawSection = typeof section === 'object' && section !== null ? section.section : section;
+  const cleanSection = typeof rawSection === 'string' && rawSection.trim() ? rawSection.trim().toLowerCase() : undefined;
 
   let tablesToQuery: ContentTable[] = [];
   if (!cleanSection) {

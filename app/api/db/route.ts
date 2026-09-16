@@ -30,13 +30,14 @@ export async function GET(request: Request) {
     }
 
     const url = new URL(request.url);
-    const section = url.searchParams.get('section')?.trim().toLowerCase() || undefined;
     const isExport = url.searchParams.get('export') === '1' || url.searchParams.get('export') === 'true';
-    const section = isExport ? undefined : (url.searchParams.get('section')?.trim().toLowerCase() || url.searchParams.get('module')?.trim().toLowerCase() || undefined);
+    const section = isExport
+      ? undefined
+      : (url.searchParams.get('section')?.trim().toLowerCase() ||
+         url.searchParams.get('module')?.trim().toLowerCase() ||
+         undefined);
 
     const data = await readContent(clubId, undefined, section ? { section } : undefined);
-
-    const data = await readContent(clubId, undefined, section);
 
     if (isExport) {
       return NextResponse.json({
