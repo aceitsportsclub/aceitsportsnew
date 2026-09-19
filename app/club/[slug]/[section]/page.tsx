@@ -2,8 +2,6 @@ import { notFound } from 'next/navigation';
 import { getSourceSiteData } from '../../../../lib/source-site-utils';
 import SourceSite from '../../../SourceSite';
 
-export const dynamic = 'force-dynamic';
-
 const VALID_SECTIONS = [
   'players',
   'team',
@@ -16,6 +14,31 @@ const VALID_SECTIONS = [
   'stats',
   'contact'
 ] as const;
+
+const KNOWN_CLUBS = [
+  'spikers', 'cricket', 'ballers', 'aceit-ballers',
+  'kabaddi', 'strikers', 'volleyball', 'basketball',
+  'football', 'badminton'
+];
+
+const STATIC_SECTIONS = [
+  'players', 'matches', 'gallery', 'events',
+  'notice-board', 'testimonials', 'stats', 'contact'
+];
+
+// Pre-render all known club×section combinations at build time
+export async function generateStaticParams() {
+  const params: { slug: string; section: string }[] = [];
+  for (const slug of KNOWN_CLUBS) {
+    for (const section of STATIC_SECTIONS) {
+      params.push({ slug, section });
+    }
+  }
+  return params;
+}
+
+// Allow dynamic params for all clubs in Supabase
+export const dynamicParams = true;
 
 export default async function ClubSectionPage({
   params

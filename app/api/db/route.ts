@@ -13,20 +13,30 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, message: 'Club identifier is required.' }, { status: 400 });
     }
 
-    try {
-      const { createSupabaseAuthServerClient } = await import('../../../lib/supabase/auth-server');
-      const { getAuthUserAndProfile } = await import('../users/user-utils');
-      const serverClient = await createSupabaseAuthServerClient();
-      const { profile } = await getAuthUserAndProfile(serverClient, request);
-      if (profile && profile.role !== 'OWNER') {
-        const userClubs = profile.clubs || [];
-        const userPrimaryClub = profile.clubId && profile.clubId !== 'ALL' ? profile.clubId : (userClubs[0] || 'spikers');
-        if (clubId === 'all' || (!userClubs.includes(clubId) && userPrimaryClub)) {
-          clubId = userPrimaryClub;
+    const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
+    const cookieHeader = request.headers.get('cookie') || '';
+    const hasPotentialAuth = Boolean(authHeader || cookieHeader.includes('sb-'));
+    let isPersonalizedOrAuthenticated = false;
+
+    if (clubId === 'all' || hasPotentialAuth) {
+      try {
+        const { createSupabaseAuthServerClient } = await import('../../../lib/supabase/auth-server');
+        const { getAuthUserAndProfile } = await import('../users/user-utils');
+        const serverClient = await createSupabaseAuthServerClient();
+        const { user, profile } = await getAuthUserAndProfile(serverClient, request);
+        if (user || profile) {
+          isPersonalizedOrAuthenticated = true;
         }
+        if (profile && profile.role !== 'OWNER') {
+          const userClubs = profile.clubs || [];
+          const userPrimaryClub = profile.clubId && profile.clubId !== 'ALL' ? profile.clubId : (userClubs[0] || 'spikers');
+          if (clubId === 'all' || (!userClubs.includes(clubId) && userPrimaryClub)) {
+            clubId = userPrimaryClub;
+          }
+        }
+      } catch {
+        if (clubId === 'all') clubId = 'spikers';
       }
-    } catch {
-      if (clubId === 'all') clubId = 'spikers';
     }
 
     const url = new URL(request.url);
@@ -40,16 +50,42 @@ export async function GET(request: Request) {
     const data = await readContent(clubId, undefined, section ? { section } : undefined);
 
     if (isExport) {
-      return NextResponse.json({
-        success: true,
-        clubId,
-        exportedAt: new Date().toISOString(),
-        version: '1.0',
-        data
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          clubId,
+          exportedAt: new Date().toISOString(),
+          version: '1.0',
+          data
+        },
+        {
+          headers: {
+            'Cache-Control': 'private, no-cache, no-store, max-age=0, must-revalidate',
+            'CDN-Cache-Control': 'no-store',
+            'Vary': 'Accept-Encoding, Authorization, Cookie'
+          }
+        }
+      );
     }
 
-    return NextResponse.json({ success: true, data });
+    const isPrivate = isPersonalizedOrAuthenticated || hasPotentialAuth;
+
+    return NextResponse.json(
+      { success: true, data },
+      {
+        headers: isPrivate
+          ? {
+              'Cache-Control': 'private, no-cache, no-store, max-age=0, must-revalidate',
+              'CDN-Cache-Control': 'no-store',
+              'Vary': 'Accept-Encoding, Authorization, Cookie'
+            }
+          : {
+              'CDN-Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+              'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+              'Vary': 'Accept-Encoding'
+            }
+      }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to load club data.';
     const status = message === 'UNAUTHENTICATED' ? 401 : (message === 'CLUB_NOT_FOUND' || message === 'CLUB_REQUIRED' ? 404 : 500);

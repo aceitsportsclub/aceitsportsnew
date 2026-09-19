@@ -14,6 +14,15 @@ function getEnv(name: 'NEXT_PUBLIC_SUPABASE_URL' | 'NEXT_PUBLIC_SUPABASE_ANON_KE
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  const allCookies = request.cookies.getAll();
+  const hasAuthCookie = allCookies.some((c) => c.name.startsWith('sb-') || c.name.includes('auth-token') || c.name.includes('access_token'));
+  const hasAuthHeader = Boolean(request.headers.get('authorization') || request.headers.get('Authorization'));
+
+  // Fast-path: If request has no auth credentials, skip outbound Supabase auth call
+  if (!hasAuthCookie && !hasAuthHeader) {
+    return response;
+  }
+
   const supabase = createServerClient(
     getEnv('NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'),
     getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEY'),
@@ -36,5 +45,16 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)']
+  matcher: [
+    '/api/auth/:path*',
+    '/api/profile/:path*',
+    '/api/users/:path*',
+    '/api/roles/:path*',
+    '/api/notifications/:path*',
+    '/api/applications/:path*',
+    '/api/upload/:path*',
+    '/api/save-all/:path*',
+    '/api/pin/:path*'
+  ]
 };
+

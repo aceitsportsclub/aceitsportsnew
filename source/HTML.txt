@@ -6584,8 +6584,9 @@
         if (pathParts.length >= 2 && (pathParts[0] === 'club' || pathParts[0] === 'clubs')) {
           return pathParts[1].toLowerCase().trim();
         }
-        return 'spikers';
+        return (typeof window !== 'undefined' && window.__ACTIVE_CLUB__) ? window.__ACTIVE_CLUB__ : 'spikers';
       }
+
 
       var activeClubScope = 'ALL';
       var currentActiveClub = null;
@@ -6978,7 +6979,19 @@
           slideshow: []
         };
       }
-      var API_BASE = window.location.origin.indexOf('http') === 0 ? '/api' : 'http://localhost:3000/api';
+      var API_BASE = (function () {
+        var base = '';
+        if (typeof window !== 'undefined' && window.__API_BASE__) {
+          base = String(window.__API_BASE__).trim();
+        } else if (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_API_BASE_URL) {
+          base = String(process.env.NEXT_PUBLIC_API_BASE_URL).trim();
+        }
+        if (base) {
+          var clean = base.replace(/\/+$/, '');
+          return clean.endsWith('/api') ? clean : (clean + '/api');
+        }
+        return (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin.indexOf('http') === 0) ? '/api' : 'http://localhost:3000/api';
+      })();
 
       function authFetch(url, opts) {
         opts = opts || {};
@@ -7767,6 +7780,33 @@
         return fetchPromise;
       }
 
+      function showClubNotFound(slug) {
+        var overlay = document.getElementById('clubNotFoundOverlay');
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.id = 'clubNotFoundOverlay';
+          overlay.style.cssText = 'position:fixed;inset:0;background:#060a14;z-index:999999;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:#fff;font-family:sans-serif;';
+          document.body.appendChild(overlay);
+        }
+        var safeSlug = String(slug || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        overlay.innerHTML = '<div style="max-width:520px;background:#0d1527;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:48px 32px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">' +
+          '<div style="font-size:56px;margin-bottom:16px;">⚠️</div>' +
+          '<h1 style="font-size:28px;font-weight:800;margin:0 0 12px;color:#f5a623;">Club Not Found</h1>' +
+          '<p style="font-size:15px;color:rgba(255,255,255,0.7);line-height:1.6;margin:0 0 28px;">' +
+          'The sports club "<strong style="color:#fff;">' + safeSlug + '</strong>" does not exist or has been removed.' +
+          '</p>' +
+          '<a href="/" style="display:inline-block;padding:12px 28px;background:#f5a623;color:#060a14;font-weight:700;border-radius:8px;text-decoration:none;font-size:14px;letter-spacing:0.5px;text-transform:uppercase;">' +
+          'Return to All Clubs' +
+          '</a>' +
+          '</div>';
+        overlay.style.display = 'flex';
+      }
+
+      function hideClubNotFound() {
+        var overlay = document.getElementById('clubNotFoundOverlay');
+        if (overlay) overlay.style.display = 'none';
+      }
+
       var _lastSyncedClub = null;
       function syncDBOnline(onComplete) {
         var activeClub = getActiveClubId();
@@ -7793,18 +7833,36 @@
 
         // Parallelize club metadata and home section requests
         var clubMetaReq = authFetch(API_BASE + '/clubs/' + encodeURIComponent(activeClub))
-          .then(function (r) { return r.json(); })
+          .then(function (r) {
+            if (!r.ok && (r.status === 404 || r.status === 400)) {
+              return { success: false, notFound: true };
+            }
+            return r.json();
+          })
           .then(function (res) {
             if (res && res.success && res.club) {
+              hideClubNotFound();
               applyClubBranding(res.club);
+            } else if (res && (res.success === false || res.notFound)) {
+              showClubNotFound(activeClub);
             }
           })
-          .catch(function (e) { console.warn('Club metadata fetch error', e); });
+          .catch(function (e) {
+            console.warn('Club metadata fetch error', e);
+          });
 
-        var homeSectionReq = loadClubSection('home');
-        var teamSectionReq = loadClubSection('players');
+        var activeSec = (window.__ACTIVE_SECTION__ || (typeof getInitialSectionFromHash === 'function' ? getInitialSectionFromHash() : 'home') || 'home').toLowerCase();
+        var isDedicatedSection = activeSec && activeSec !== 'home';
 
-        Promise.all([clubMetaReq, homeSectionReq, teamSectionReq]).then(function () {
+        var sectionPromises = [];
+        if (isDedicatedSection) {
+          sectionPromises.push(loadClubSection(activeSec));
+        } else {
+          sectionPromises.push(loadClubSection('home'));
+          sectionPromises.push(loadClubSection('players'));
+        }
+
+        Promise.all([clubMetaReq].concat(sectionPromises)).then(function () {
           if (onComplete) onComplete();
         });
       }
@@ -7829,7 +7887,7 @@
           var raw = localStorage.getItem(FOOTER_CACHE_KEY);
           if (raw) { var parsed = JSON.parse(raw); if (parsed && parsed.footer) applyFooterConfig(parsed.footer); }
         } catch(e) {}
-        fetch('/api/landing/config')
+        authFetch(API_BASE + '/landing/config')
           .then(function (r) { return r.json(); })
           .then(function (res) {
             if (res && res.success && res.config && res.config.footer) {
@@ -8970,21 +9028,43 @@
       renderAllPublic();
       fetchLandingFooterConfig();
 
-      // Initial section detection from URL hash
+      // Initial section detection from URL path, query params, hash & route
       function getInitialSectionFromHash() {
+        var pathParts = window.location.pathname.split('/').filter(Boolean);
+        if (pathParts.length >= 3 && (pathParts[0] === 'club' || pathParts[0] === 'clubs')) {
+          var secFromPath = pathParts[2].toLowerCase().trim();
+          if (secFromPath === 'team') return 'players';
+          if (secFromPath === 'news' || secFromPath === 'announcements') return 'notice-board';
+          return secFromPath;
+        }
+        var params = new URLSearchParams(window.location.search);
+        var secFromParam = params.get('section') || params.get('view') || params.get('page');
+        if (secFromParam) {
+          var s = secFromParam.toLowerCase().trim();
+          if (s === 'team') return 'players';
+          if (s === 'news' || s === 'announcements') return 'notice-board';
+          return s;
+        }
+        var act = window.__ACTIVE_SECTION__;
+        if (act && act !== 'home') {
+          if (act === 'team') return 'players';
+          if (act === 'news' || act === 'announcements') return 'notice-board';
+          return act;
+        }
         var h = (window.location.hash || '').toLowerCase().replace(/^#/, '');
         if (h === 'team' || h === 'players') return 'players';
         if (h === 'gallery') return 'gallery';
         if (h === 'matches') return 'matches';
         if (h === 'events') return 'events';
         if (h === 'notice-board' || h === 'news' || h === 'announcements') return 'notice-board';
+        if (h === 'stats') return 'stats';
+        if (h === 'testimonials') return 'testimonials';
+        if (h === 'contact') return 'contact';
         return 'home';
       }
 
+
       var initialSec = getInitialSectionFromHash();
-      if (initialSec !== 'home') {
-        loadClubSection(initialSec);
-      }
       syncDBOnline();
 
       // IntersectionObserver for lazy loading below-the-fold sections on scroll
@@ -9184,6 +9264,10 @@
       var activeSpTab = 'profile';
 
       function fetchSystemRoles(cb) {
+        if (Array.isArray(systemRoles) && systemRoles.length > 0) {
+          if (cb) cb(systemRoles);
+          return Promise.resolve(systemRoles);
+        }
         return fetch(API_BASE + '/roles')
           .then(function (r) { return r.json(); })
           .then(function (res) {
@@ -9212,6 +9296,21 @@
       // 1. Initialize Auth State & Top Navbar Widget
       function initAuthAndNav() {
         fetchSystemRoles();
+
+        var hasAuthSession = false;
+        try {
+          var token = localStorage.getItem('aceit_auth_token') || localStorage.getItem('authToken');
+          var cookies = document.cookie || '';
+          hasAuthSession = Boolean(token || cookies.indexOf('sb-') !== -1);
+        } catch (e) {}
+
+        if (!hasAuthSession) {
+          currentUser = null;
+          renderNavUserWidget();
+          updateAdminUserBadge();
+          return;
+        }
+
         authFetch(API_BASE + '/auth/me')
           .then(function (r) { return r.json(); })
           .then(function (res) {
@@ -9223,8 +9322,11 @@
                   localStorage.setItem('authToken', res.token);
                 } catch (e) { }
               }
+              if (typeof fetchNotifications === 'function') fetchNotifications();
+              if (!notifPollingInterval && typeof fetchNotifications === 'function') notifPollingInterval = setInterval(fetchNotifications, 60000);
             } else if (res && res.authenticated === false) {
               currentUser = null;
+              if (notifPollingInterval) { clearInterval(notifPollingInterval); notifPollingInterval = null; }
               try {
                 localStorage.removeItem('aceit_auth_token');
                 localStorage.removeItem('authToken');
@@ -13682,7 +13784,7 @@
                   applyClubBranding(updatedClub);
                 }
 
-                showAlert(club ? 'Club updated successfully.' : 'Club created successfully! Public page ready at ?club=' + (payload.slug));
+                showAlert(club ? 'Club updated successfully.' : 'Club created successfully! Public page live at /club/' + (payload.slug));
                 formArea.classList.remove('open');
                 renderClubsTab();
                 updateAdminUserBadge();
@@ -14849,9 +14951,11 @@
 
       /* ============ PHASE 4: INITIALIZATION CALLS ============ */
       renderPublicAnnouncements('all');
-      fetchNotifications();
-      if (notifPollingInterval) clearInterval(notifPollingInterval);
-      notifPollingInterval = setInterval(fetchNotifications, 30000);
+      if (currentUser) {
+        fetchNotifications();
+        if (notifPollingInterval) clearInterval(notifPollingInterval);
+        notifPollingInterval = setInterval(fetchNotifications, 60000);
+      }
 
       /* ============ SMOOTH ANCHOR (fallback for older browsers already handled by CSS) ============ */
     })();

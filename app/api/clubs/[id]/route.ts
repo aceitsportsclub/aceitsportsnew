@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseAuthServerClient } from '../../../../lib/supabase/auth-server';
+import { createSupabaseServerClient } from '../../../../lib/supabase/server';
 import { getAuthProfile } from '../../../../lib/supabase/auth-profile';
 
 function isUuid(value: unknown): value is string {
@@ -48,12 +49,21 @@ function toSourceClub(club: Record<string, unknown>) {
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
-    const supabase = await createSupabaseAuthServerClient();
+    const supabase = createSupabaseServerClient();
     const club = await findClub(supabase, id);
     if (!club) {
       return NextResponse.json({ success: false, message: 'Club not found.' }, { status: 404 });
     }
-    return NextResponse.json({ success: true, club: toSourceClub(club) });
+    return NextResponse.json(
+      { success: true, club: toSourceClub(club) },
+      {
+        headers: {
+          'CDN-Cache-Control': 'public, s-maxage=120, stale-while-revalidate=1200',
+          'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=1200',
+          'Vary': 'Accept-Encoding'
+        }
+      }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to load club.';
     return NextResponse.json({ success: false, message }, { status: 500 });

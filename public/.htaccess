@@ -1,0 +1,97 @@
+# ACEIT Sports - InfinityFree .htaccess
+# Optimized for Apache 2.4 on InfinityFree Free Hosting
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Force HTTPS (InfinityFree free SSL)
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ----------------------------------------------------
+# 1. SERVE EXISTING STATIC ASSETS DIRECTLY
+# Static files: images, JS chunks, CSS, fonts, webp, json, etc.
+# ----------------------------------------------------
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# ----------------------------------------------------
+# 2. DYNAMIC CLUB APPLICATION SHELL: /club/{slug} & /club/{slug}/{section}
+# Routes all club requests to the universal client-side application shell (/club.html).
+# The client-side app reads the slug/section dynamically from window.location,
+# queries the backend API in real time, and renders the club from the database.
+# New admin-created clubs work immediately without rebuilding static files!
+# ----------------------------------------------------
+RewriteRule ^club(/.*)?$ /club.html [L]
+
+# ----------------------------------------------------
+# 3. CLEAN HTML URLS: /{page} -> /{page}.html
+# Resolves root pages like /about -> /about.html if present
+# ----------------------------------------------------
+RewriteCond %{DOCUMENT_ROOT}/$1.html -f [OR]
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^([a-zA-Z0-9_-]+)/?$ /$1.html [L]
+
+# ----------------------------------------------------
+# 4. SERVE EXISTING DIRECTORIES DIRECTLY
+# Exclude /club routes and only serve directories containing an index.html file!
+# ----------------------------------------------------
+RewriteCond %{REQUEST_URI} !^/club
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_FILENAME}/index.html -f
+RewriteRule ^ - [L]
+
+# ----------------------------------------------------
+# 5. SPA FALLBACK
+# Fallback for client-side routing and top-level pages
+# ----------------------------------------------------
+RewriteRule ^ /index.html [L]
+
+# ========================================
+# PERFORMANCE & CACHING (Browser Cache)
+# ========================================
+<IfModule mod_headers.c>
+  # Immutable static assets (hashed CSS, JS, Next.js chunks)
+  <FilesMatch "\.(css|js|woff|woff2|ttf|otf|eot)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Images and icons
+  <FilesMatch "\.(jpg|jpeg|png|gif|svg|webp|ico)$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+
+  # HTML pages (short cache with revalidation)
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "public, max-age=3600, stale-while-revalidate=86400"
+  </FilesMatch>
+</IfModule>
+
+# ========================================
+# COMPRESSION (GZIP)
+# ========================================
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>
+
+# ========================================
+# SECURITY & COMPATIBILITY
+# ========================================
+# Disable directory index browsing
+Options -Indexes
+
+# Block sensitive files
+<FilesMatch "^\.(env|git|htaccess|htpasswd)">
+  Order allow,deny
+  Deny from all
+</FilesMatch>
+
+# Security headers
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Custom 404 page
+ErrorDocument 404 /404.html

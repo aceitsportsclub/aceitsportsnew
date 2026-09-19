@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createSupabaseAuthServerClient } from '../../../../lib/supabase/auth-server';
+import { createSupabaseServerClient } from '../../../../lib/supabase/server';
 
 const CONFIG_PATH = path.join(process.cwd(), 'data', 'landing-config.json');
 
@@ -18,7 +18,7 @@ function readConfig() {
 
 export async function GET() {
   try {
-    const supabase = await createSupabaseAuthServerClient();
+    const supabase = createSupabaseServerClient();
 
     const [clubsRes, matchesRes, eventsRes] = await Promise.all([
       supabase.from('clubs').select('*').eq('active', true).order('name', { ascending: true }),
@@ -106,7 +106,9 @@ export async function GET() {
       },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300'
+          'CDN-Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600',
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600',
+          'Vary': 'Accept-Encoding'
         }
       }
     );

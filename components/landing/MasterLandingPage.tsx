@@ -53,8 +53,24 @@ export default function MasterLandingPage() {
   const [isLoading, setIsLoading] = useState(!initialCache);
 
   useEffect(() => {
+    // 0. Handle legacy query parameters: /?club=spikers -> /club/spikers
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const legacyClub = params.get('club') || params.get('clubId') || params.get('c');
+      if (legacyClub) {
+        const rawSection = params.get('section') || params.get('view') || params.get('page');
+        const section = (rawSection || '').trim().toLowerCase();
+        const target = `/club/${encodeURIComponent(legacyClub.toLowerCase())}${section && section !== 'home' ? '/' + encodeURIComponent(section) : ''}`;
+        window.location.replace(target);
+        return;
+      }
+    }
+
+    const PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+    const API_BASE = PUBLIC_API_BASE ? (PUBLIC_API_BASE.replace(/\/+$/, '') + (PUBLIC_API_BASE.endsWith('/api') ? '' : '/api')) : '/api';
+
     // 1. Fetch Landing Data (Clubs, Matches, Events, Config) in parallel
-    const dataPromise = fetch('/api/landing/data')
+    const dataPromise = fetch(`${API_BASE}/landing/data`)
       .then((res) => res.json())
       .then((data) => {
         if (data && data.success) {
@@ -87,19 +103,27 @@ export default function MasterLandingPage() {
         console.warn('Master Landing data fetch error:', err);
       });
 
-    // 2. Check Auth State via existing /api/auth/me in parallel
-    const authPromise = fetch('/api/auth/me')
-      .then((res) => res.json())
-      .then((res) => {
-        if (res && res.authenticated && (res.user || res.profile)) {
-          setUser(res.user || res.profile);
-        } else {
-          setUser(null);
-        }
-      })
-      .catch(() => {
-        setUser(null);
-      });
+    // 2. Check Auth State via /api/auth/me only if auth session indicator is present
+    const hasAuth = typeof document !== 'undefined' && Boolean(
+      document.cookie.includes('sb-') ||
+      localStorage.getItem('aceit_auth_token') ||
+      localStorage.getItem('authToken')
+    );
+
+    const authPromise = hasAuth
+      ? fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
+          .then((res) => res.json())
+          .then((res) => {
+            if (res && (res.authenticated || res.success) && (res.user || res.profile)) {
+              setUser(res.user || res.profile);
+            } else {
+              setUser(null);
+            }
+          })
+          .catch(() => {
+            setUser(null);
+          })
+      : Promise.resolve();
 
     // Immediately show page as soon as required landing data & auth are ready (no artificial delays)
     Promise.all([dataPromise, authPromise]).finally(() => {

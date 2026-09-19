@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseAuthServerClient } from '../../../lib/supabase/auth-server';
+import { createSupabaseServerClient } from '../../../lib/supabase/server';
 import { getAuthProfile } from '../../../lib/supabase/auth-profile';
 
 function toRow(body: Record<string, unknown>) {
@@ -22,10 +23,19 @@ function toSourceClub(club: Record<string, unknown>) {
 }
 
 export async function GET() {
-  const supabase = await createSupabaseAuthServerClient();
+  const supabase = createSupabaseServerClient();
   const { data, error } = await supabase.from('clubs').select('*').eq('active', true).order('name');
   if (error) return NextResponse.json({ success: false, clubs: [], message: error.message }, { status: 500 });
-  return NextResponse.json({ success: true, clubs: (data ?? []).map(toSourceClub) });
+  return NextResponse.json(
+    { success: true, clubs: (data ?? []).map(toSourceClub) },
+    {
+      headers: {
+        'CDN-Cache-Control': 'public, s-maxage=120, stale-while-revalidate=1200',
+        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=1200',
+        'Vary': 'Accept-Encoding'
+      }
+    }
+  );
 }
 
 export async function POST(request: Request) {

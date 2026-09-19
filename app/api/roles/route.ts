@@ -34,10 +34,19 @@ export async function GET() {
 
     const roles = Array.from(rolesMap.values()).map(toSourceRole);
 
-    return NextResponse.json({
-      success: true,
-      roles
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        roles
+      },
+      {
+        headers: {
+          'CDN-Cache-Control': 'public, s-maxage=120, stale-while-revalidate=1200',
+          'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=1200',
+          'Vary': 'Accept-Encoding'
+        }
+      }
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error fetching roles';
     return NextResponse.json({ success: false, roles: SEEDED_ROLES.map(toSourceRole), message }, { status: 500 });

@@ -27,7 +27,16 @@ function writeConfig(data: Record<string, unknown>) {
 
 export async function GET() {
   const config = readConfig();
-  return NextResponse.json({ success: true, config });
+  return NextResponse.json(
+    { success: true, config },
+    {
+      headers: {
+        'CDN-Cache-Control': 'public, s-maxage=120, stale-while-revalidate=1200',
+        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=1200',
+        'Vary': 'Accept-Encoding'
+      }
+    }
+  );
 }
 
 export async function PUT(request: Request) {

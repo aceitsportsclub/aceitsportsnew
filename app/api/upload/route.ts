@@ -21,6 +21,56 @@ function clubSlugFromFolder(folder: string) {
   return normalized || 'spikers';
 }
 
+// Bucket-specific max dimensions for image optimization
+const BUCKET_MAX_DIMENSIONS: Record<string, number> = {
+  'player-photos': 800,
+  'gallery-media': 1200,
+  'event-posters': 1200,
+  'hero-slides': 1920,
+  'club-logos': 512,
+  'sponsor-logos': 512,
+};
+
+/**
+ * Optimize an image buffer using sharp:
+ * - Strip EXIF/metadata
+ * - Resize to bucket-appropriate max dimensions
+ * - Convert raster images to WebP
+ * SVG files pass through unchanged.
+ */
+async function optimizeImage(
+  imageBuffer: Buffer,
+  contentType: string,
+  bucket: string
+): Promise<{ buffer: Buffer; contentType: string; ext: string }> {
+  // SVG: pass through unchanged
+  if (contentType === 'image/svg+xml') {
+    return { buffer: imageBuffer, contentType, ext: 'svg' };
+  }
+
+  try {
+    const sharp = (await import('sharp')).default;
+    const maxDim = BUCKET_MAX_DIMENSIONS[bucket] || 1200;
+
+    const optimized = await sharp(imageBuffer)
+      .resize({
+        width: maxDim,
+        height: maxDim,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .rotate() // Auto-rotate based on EXIF orientation before stripping
+      .webp({ quality: 82, effort: 4 })
+      .toBuffer();
+
+    return { buffer: optimized, contentType: 'image/webp', ext: 'webp' };
+  } catch (sharpError) {
+    // If sharp fails (e.g. unsupported format), fall back to original
+    console.warn('[Upload] sharp optimization failed, using original:', sharpError);
+    return { buffer: imageBuffer, contentType, ext: extensionFor(contentType) };
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const serverClient = await createSupabaseAuthServerClient();
@@ -93,7 +143,11 @@ export async function POST(request: Request) {
     } else if (folderHint === 'events' || folderHint === 'event-posters' || folderHint.includes('event') || moduleHint === 'events') {
       bucket = 'event-posters';
     }
-    const path = `${club.slug}/${crypto.randomUUID()}.${extensionFor(parsed.contentType)}`;
+
+    // Optimize image before upload (resize, strip metadata, convert to WebP)
+    const optimized = await optimizeImage(parsed.data, parsed.contentType, bucket);
+
+    const filePath = `${club.slug}/${crypto.randomUUID()}.${optimized.ext}`;
 
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -103,11 +157,11 @@ export async function POST(request: Request) {
       storageClient = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } }) as any;
     }
 
-    const { error: uploadError } = await storageClient.storage.from(bucket).upload(path, parsed.data, { contentType: parsed.contentType, upsert: false });
+    const { error: uploadError } = await storageClient.storage.from(bucket).upload(filePath, optimized.buffer, { contentType: optimized.contentType, upsert: false });
     if (uploadError) throw uploadError;
 
-    const { data } = storageClient.storage.from(bucket).getPublicUrl(path);
-    return NextResponse.json({ success: true, url: data.publicUrl, path, bucket });
+    const { data } = storageClient.storage.from(bucket).getPublicUrl(filePath);
+    return NextResponse.json({ success: true, url: data.publicUrl, path: filePath, bucket });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to upload image.';
     const status = message === 'UNAUTHENTICATED' ? 401 : message === 'FORBIDDEN' ? 403 : 400;

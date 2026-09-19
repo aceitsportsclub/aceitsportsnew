@@ -313,12 +313,37 @@ const ROUTE_CSS = `
   }
 `;
 
-export default function SourceSite({ markup, styles, scripts, club = 'spikers', section = 'home' }: SourceSiteProps) {
+const PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+
+export default function SourceSite({ markup, styles, scripts, club, section }: SourceSiteProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const scriptsInitialized = useRef(false);
 
-  const cleanClub = (club || 'spikers').toLowerCase().trim();
-  const cleanSection = (section || 'home').toLowerCase().trim();
+  // Dynamically resolve club and section from URL in browser if not explicitly supplied or if running statically
+  let initialClub = club;
+  let initialSection = section;
+
+  if (typeof window !== 'undefined') {
+    (window as any).__API_BASE__ = PUBLIC_API_BASE ? (PUBLIC_API_BASE.replace(/\/+$/, '') + (PUBLIC_API_BASE.endsWith('/api') ? '' : '/api')) : '/api';
+
+    const pathname = window.location.pathname;
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length >= 2 && (parts[0] === 'club' || parts[0] === 'clubs')) {
+      initialClub = parts[1].toLowerCase().trim();
+      if (parts.length >= 3) {
+        initialSection = parts[2].toLowerCase().trim();
+      }
+    } else {
+      const searchParams = new URLSearchParams(window.location.search);
+      const queryClub = searchParams.get('club') || searchParams.get('clubId') || searchParams.get('c');
+      if (queryClub) initialClub = queryClub.toLowerCase().trim();
+      const querySec = searchParams.get('section') || searchParams.get('view') || searchParams.get('page');
+      if (querySec) initialSection = querySec.toLowerCase().trim();
+    }
+  }
+
+  const cleanClub = (initialClub || 'spikers').toLowerCase().trim();
+  const cleanSection = (initialSection || 'home').toLowerCase().trim();
   const isHome = cleanSection === 'home';
 
   if (typeof window !== 'undefined') {
@@ -434,6 +459,9 @@ export default function SourceSite({ markup, styles, scripts, club = 'spikers', 
               </div>
             `;
             activeEl.parentNode.insertBefore(banner, activeEl);
+            setTimeout(() => {
+              banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
           }
         }
       }

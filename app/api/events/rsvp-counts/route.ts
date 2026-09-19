@@ -22,7 +22,16 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({ success: true, counts });
+    return NextResponse.json(
+      { success: true, counts },
+      {
+        headers: {
+          'CDN-Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+          'Vary': 'Accept-Encoding'
+        }
+      }
+    );
   } catch {
     return NextResponse.json({ success: true, counts: {} });
   }

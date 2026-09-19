@@ -55,7 +55,16 @@ export async function GET(request: Request) {
     }
 
     const announcements = rows.map((row) => toSourceAnnouncement(row, profileMap));
-    return NextResponse.json({ success: true, announcements });
+    return NextResponse.json(
+      { success: true, announcements },
+      {
+        headers: {
+          'CDN-Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300',
+          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300',
+          'Vary': 'Accept-Encoding'
+        }
+      }
+    );
   } catch (error) {
     return NextResponse.json(
       {
