@@ -59,8 +59,10 @@ export async function GET(request: Request) {
       { success: true, announcements },
       {
         headers: {
-          'CDN-Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300',
-          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'CDN-Cache-Control': 'no-store',
+          'Pragma': 'no-cache',
+          'Expires': '0',
           'Vary': 'Accept-Encoding'
         }
       }

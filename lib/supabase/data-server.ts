@@ -188,7 +188,7 @@ async function resolveClubId(supabase: SupabaseClient, clubRef: string): Promise
   throw new Error('CLUB_NOT_FOUND');
 }
 
-export async function readContent(clubId: string, client?: SupabaseClient, section?: string | { section?: string }) {
+export async function readContent(clubId: string, client?: SupabaseClient, section?: string | { section?: string; limit?: number }) {
   const supabase = client || await createSupabaseAuthServerClient();
   const cleanRef = (clubId || '').trim().toLowerCase();
   const isAll = cleanRef === 'all';
@@ -218,6 +218,7 @@ export async function readContent(clubId: string, client?: SupabaseClient, secti
   };
 
   const rawSection = typeof section === 'object' && section !== null ? section.section : section;
+  const rawLimit = typeof section === 'object' && section !== null && typeof section.limit === 'number' && Number.isFinite(section.limit) && section.limit > 0 ? section.limit : undefined;
   const cleanSection = typeof rawSection === 'string' && rawSection.trim() ? rawSection.trim().toLowerCase() : undefined;
 
   let tablesToQuery: ContentTable[] = [];
@@ -380,6 +381,15 @@ export async function readContent(clubId: string, client?: SupabaseClient, secti
         updated_at: row.updated_at || createdAt
       };
     });
+  }
+
+  if (rawLimit !== undefined) {
+    if ((cleanSection === 'players' || cleanSection === 'team') && Array.isArray(result.team)) {
+      result.team = result.team.slice(0, rawLimit);
+    }
+    if (cleanSection === 'gallery' && Array.isArray(result.gallery)) {
+      result.gallery = result.gallery.slice(0, rawLimit);
+    }
   }
 
   return result;

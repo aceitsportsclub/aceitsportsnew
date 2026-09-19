@@ -525,18 +525,21 @@ export default function SourceSite({ markup, styles, scripts, club, section }: S
           urlStr.includes('export=true')
         );
 
+        let newUrl = urlStr;
         // Admin dashboard must ALWAYS receive unconstrained full database content
         if (!isAdminActive && !urlStr.includes('section=')) {
           const activeSec = ((window as any).__ACTIVE_SECTION__ || cleanSection || 'home').toLowerCase();
           if (activeSec) {
             const separator = urlStr.includes('?') ? '&' : '?';
-            const newUrl = `${urlStr}${separator}section=${encodeURIComponent(activeSec)}`;
-            if (typeof input === 'string') {
-              return origFetch(newUrl, init);
-            } else if (input instanceof Request) {
-              return origFetch(new Request(newUrl, input));
-            }
+            newUrl = `${urlStr}${separator}section=${encodeURIComponent(activeSec)}`;
           }
+        }
+
+        const freshInit: RequestInit = { ...(init || {}), cache: 'no-cache' };
+        if (typeof input === 'string') {
+          return origFetch(newUrl, freshInit);
+        } else if (input instanceof Request) {
+          return origFetch(new Request(newUrl, { ...input, ...freshInit }));
         }
       }
 

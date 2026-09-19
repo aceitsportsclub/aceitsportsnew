@@ -58,8 +58,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       { success: true, club: toSourceClub(club) },
       {
         headers: {
-          'CDN-Cache-Control': 'public, s-maxage=120, stale-while-revalidate=1200',
-          'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=1200',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'CDN-Cache-Control': 'no-store',
+          'Pragma': 'no-cache',
+          'Expires': '0',
           'Vary': 'Accept-Encoding'
         }
       }

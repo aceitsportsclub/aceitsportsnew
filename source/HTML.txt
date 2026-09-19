@@ -7068,6 +7068,12 @@
             .then(function (res) {
               if (res && res.success && res.data) {
                 DB = res.data;
+                if (typeof AceitCache !== 'undefined' && AceitCache.invalidateClub) {
+                  AceitCache.invalidateClub(activeClub);
+                }
+                try {
+                  localStorage.setItem('aceit_cache_bust_' + activeClub, Date.now().toString());
+                } catch(e) {}
                 renderAllPublic();
                 if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
                 if (typeof renderAllAdminTabs === 'function') renderAllAdminTabs();
@@ -7621,6 +7627,18 @@
           } catch (e) {}
         }
 
+        function removeStorageFallback(clubSlug) {
+          try {
+            var prefix = 'aceit_sec_' + (clubSlug || '').toLowerCase();
+            for (var i = localStorage.length - 1; i >= 0; i--) {
+              var k = localStorage.key(i);
+              if (k && k.toLowerCase().indexOf(prefix) === 0) {
+                localStorage.removeItem(k);
+              }
+            }
+          } catch (e) {}
+        }
+
         return {
           getMem: function (club, section) {
             return memCache.get((club + ':' + section).toLowerCase()) || null;
@@ -7654,6 +7672,33 @@
                 var tx = db.transaction('section_cache', 'readwrite');
                 var store = tx.objectStore('section_cache');
                 store.put(data, key);
+              } catch (e) {}
+            });
+          },
+          invalidateClub: function (club) {
+            var prefix = ((club || '') + ':').toLowerCase();
+            memCache.forEach(function (_, k) {
+              if (k.indexOf(prefix) === 0) {
+                memCache.delete(k);
+              }
+            });
+            removeStorageFallback(club);
+            openIDB().then(function (db) {
+              if (!db) return;
+              try {
+                var tx = db.transaction('section_cache', 'readwrite');
+                var store = tx.objectStore('section_cache');
+                if (typeof store.getAllKeys === 'function') {
+                  var req = store.getAllKeys();
+                  req.onsuccess = function () {
+                    var keys = req.result || [];
+                    keys.forEach(function (k) {
+                      if (typeof k === 'string' && k.indexOf(prefix) === 0) {
+                        store.delete(k);
+                      }
+                    });
+                  };
+                }
               } catch (e) {}
             });
           },
@@ -7722,41 +7767,21 @@
         if (sec === 'team') sec = 'players';
         if (sec === 'news') sec = 'notice-board';
 
-        // 1. In-memory check (instant)
-        var inMem = AceitCache.getMem(activeClub, sec);
-        if (inMem) {
-          if (getActiveClubId().toLowerCase() === activeClub) {
-            applySectionDataToDB(sec, inMem);
-          }
-          if (callback) callback(inMem);
-          return Promise.resolve(inMem);
-        }
+        var activeSec = (window.__ACTIVE_SECTION__ || (typeof getInitialSectionFromHash === 'function' ? getInitialSectionFromHash() : 'home') || 'home').toLowerCase();
+        var isHomePage = (!activeSec || activeSec === 'home');
+        var limitQuery = (isHomePage && (sec === 'players' || sec === 'gallery')) ? '&limit=12' : '';
+        var fetchUrl = API_BASE + '/db?clubId=' + encodeURIComponent(activeClub) + '&section=' + encodeURIComponent(sec) + limitQuery;
 
-        // 2. In-flight request deduplication
-        var pending = AceitCache.getPending(activeClub, sec);
-        if (pending) {
-          return pending.then(function (data) {
-            if (getActiveClubId().toLowerCase() === activeClub) {
-              applySectionDataToDB(sec, data);
-            }
-            if (callback) callback(data);
-            return data;
-          });
-        }
+        var isAdminActive = Boolean(
+          document.querySelector('.admin-overlay.open') ||
+          document.querySelector('#adminOverlay.open') ||
+          document.querySelector('.admin-tab-btn.active') ||
+          (window && window.currentAdminTab)
+        );
 
-        // 3. Persistent IndexedDB check before fetching from network
-        var fetchPromise = AceitCache.getIdb(activeClub, sec).then(function (cached) {
-          if (cached) {
-            AceitCache.setMem(activeClub, sec, cached);
-            if (getActiveClubId().toLowerCase() === activeClub) {
-              applySectionDataToDB(sec, cached);
-            }
-            if (callback) callback(cached);
-            return cached;
-          }
-
-          // 4. Network fetch with section query
-          return authFetch(API_BASE + '/db?clubId=' + encodeURIComponent(activeClub) + '&section=' + encodeURIComponent(sec))
+        // 1. If admin is active, always fetch directly from network without caching
+        if (isAdminActive) {
+          return authFetch(fetchUrl, { cache: 'no-cache' })
             .then(function (res) { return res.json(); })
             .then(function (res) {
               if (res && res.success && res.data) {
@@ -7771,8 +7796,64 @@
               return null;
             })
             .catch(function (err) {
-              console.warn('[Section Load Error]', sec, err);
+              console.warn('[Admin Section Load Error]', sec, err);
               return null;
+            });
+        }
+
+        // 2. In-memory fast paint
+        var inMem = AceitCache.getMem(activeClub, sec);
+        if (inMem) {
+          if (getActiveClubId().toLowerCase() === activeClub) {
+            applySectionDataToDB(sec, inMem);
+          }
+          if (callback) callback(inMem);
+        }
+
+        // 3. In-flight request deduplication
+        var pending = AceitCache.getPending(activeClub, sec);
+        if (pending) {
+          return pending.then(function (data) {
+            if (getActiveClubId().toLowerCase() === activeClub && data) {
+              applySectionDataToDB(sec, data);
+            }
+            if (callback && data) callback(data);
+            return data;
+          });
+        }
+
+        // 4. Stale-While-Revalidate network fetch: Check IDB for immediate paint, and ALWAYS validate fresh from network
+        var fetchPromise = AceitCache.getIdb(activeClub, sec).then(function (cached) {
+          if (cached && !inMem) {
+            AceitCache.setMem(activeClub, sec, cached);
+            if (getActiveClubId().toLowerCase() === activeClub) {
+              applySectionDataToDB(sec, cached);
+            }
+            if (callback) callback(cached);
+          }
+
+          // Fetch fresh from network with no-cache to guarantee no stale data
+          return authFetch(fetchUrl, { cache: 'no-cache' })
+            .then(function (res) { return res.json(); })
+            .then(function (res) {
+              if (res && res.success && res.data) {
+                var cachedRef = cached || inMem;
+                var hasChanged = !cachedRef || JSON.stringify(res.data) !== JSON.stringify(cachedRef);
+                if (hasChanged) {
+                  AceitCache.setMem(activeClub, sec, res.data);
+                  AceitCache.setIdb(activeClub, sec, res.data);
+                  if (getActiveClubId().toLowerCase() === activeClub) {
+                    applySectionDataToDB(sec, res.data);
+                  }
+                  if (callback) callback(res.data);
+                }
+                return res.data;
+              }
+              return cached || inMem || null;
+            })
+            .catch(function (err) {
+              console.warn('[Section Load Error]', sec, err);
+              return cached || inMem || null;
             });
         });
 
@@ -8121,8 +8202,9 @@
           return;
         }
 
-        var isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-        var limit = isMobile ? 20 : 28;
+        var activeSec = (window.__ACTIVE_SECTION__ || (typeof getInitialSectionFromHash === 'function' ? getInitialSectionFromHash() : 'home') || 'home').toLowerCase();
+        var isHomePage = (!activeSec || activeSec === 'home');
+        var limit = isHomePage ? 12 : Infinity;
         var visiblePlayers = (!teamExpanded && players.length > limit) ? players.slice(0, limit) : players;
 
         visiblePlayers.forEach(function (p) {
@@ -8158,6 +8240,18 @@
             if (sBtn) {
               sBtn.addEventListener('click', function () {
                 teamExpanded = !teamExpanded;
+                if (teamExpanded && isHomePage && players.length <= 12) {
+                  authFetch(API_BASE + '/db?clubId=' + encodeURIComponent(activeSlug) + '&section=players', { cache: 'no-cache' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (res) {
+                      if (res && res.success && res.data && Array.isArray(res.data.team)) {
+                        DB.team = res.data.team;
+                        if (res.data.categories) DB.categories = res.data.categories;
+                        renderTeamPublic();
+                      }
+                    })
+                    .catch(function () {});
+                }
                 renderTeamPublic();
               });
             }
@@ -8240,8 +8334,9 @@
           return;
         }
 
-        var isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-        var limit = isMobile ? 20 : 28;
+        var activeSec = (window.__ACTIVE_SECTION__ || (typeof getInitialSectionFromHash === 'function' ? getInitialSectionFromHash() : 'home') || 'home').toLowerCase();
+        var isHomePage = (!activeSec || activeSec === 'home');
+        var limit = isHomePage ? 12 : Infinity;
         var visibleItems = (!galleryExpanded && items.length > limit) ? items.slice(0, limit) : items;
 
         visibleItems.forEach(function (g) {
@@ -8277,6 +8372,18 @@
             if (gBtn) {
               gBtn.addEventListener('click', function () {
                 galleryExpanded = !galleryExpanded;
+                if (galleryExpanded && isHomePage && items.length <= 12) {
+                  authFetch(API_BASE + '/db?clubId=' + encodeURIComponent(activeSlug) + '&section=' + encodeURIComponent('gallery'), { cache: 'no-cache' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (res) {
+                      if (res && res.success && res.data && Array.isArray(res.data.gallery)) {
+                        DB.gallery = res.data.gallery;
+                        if (res.data.categories) DB.categories = res.data.categories;
+                        renderGalleryPublic();
+                      }
+                    })
+                    .catch(function () {});
+                }
                 renderGalleryPublic();
               });
             }

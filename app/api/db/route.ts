@@ -46,8 +46,10 @@ export async function GET(request: Request) {
       : (url.searchParams.get('section')?.trim().toLowerCase() ||
          url.searchParams.get('module')?.trim().toLowerCase() ||
          undefined);
+    const rawLimit = url.searchParams.get('limit');
+    const limit = rawLimit && /^\d+$/.test(rawLimit) ? parseInt(rawLimit, 10) : undefined;
 
-    const data = await readContent(clubId, undefined, section ? { section } : undefined);
+    const data = await readContent(clubId, undefined, section ? { section, limit } : undefined);
 
     if (isExport) {
       return NextResponse.json(
@@ -62,28 +64,24 @@ export async function GET(request: Request) {
           headers: {
             'Cache-Control': 'private, no-cache, no-store, max-age=0, must-revalidate',
             'CDN-Cache-Control': 'no-store',
+            'Pragma': 'no-cache',
+            'Expires': '0',
             'Vary': 'Accept-Encoding, Authorization, Cookie'
           }
         }
       );
     }
 
-    const isPrivate = isPersonalizedOrAuthenticated || hasPotentialAuth;
-
     return NextResponse.json(
       { success: true, data },
       {
-        headers: isPrivate
-          ? {
-              'Cache-Control': 'private, no-cache, no-store, max-age=0, must-revalidate',
-              'CDN-Cache-Control': 'no-store',
-              'Vary': 'Accept-Encoding, Authorization, Cookie'
-            }
-          : {
-              'CDN-Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
-              'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
-              'Vary': 'Accept-Encoding'
-            }
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'CDN-Cache-Control': 'no-store',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'Vary': 'Accept-Encoding, Authorization, Cookie'
+        }
       }
     );
   } catch (error) {
